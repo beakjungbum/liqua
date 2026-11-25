@@ -1,0 +1,93 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // Type helpers evaluated on the resulting document (tolerant of merge writes).
+    function absent(d, k) {
+      return !(k in d);
+    }
+
+    function validUser(d) {
+      return (absent(d, 'targetAmount') || (d.targetAmount is int && d.targetAmount >= 0))
+        && (absent(d, 'points') || (d.points is int && d.points >= 0))
+        && (absent(d, 'currentLevel') || d.currentLevel is int)
+        && (absent(d, 'plan') || d.plan is map)
+        && (absent(d, 'profile') || d.profile is map)
+        && (absent(d, 'growth') || d.growth is map)
+        && (absent(d, 'celebrated') || d.celebrated is list);
+    }
+
+    function validAsset(d) {
+      return d.keys().hasAll(['name', 'category', 'quantity', 'purchasePrice', 'currentPrice'])
+        && d.name is string && d.name.size() >= 1 && d.name.size() <= 100
+        && d.category in ['stock', 'cash', 'deposit', 'etf', 'crypto', 'fx', 'other']
+        && d.quantity is number && d.quantity >= 0
+        && d.purchasePrice is number && d.purchasePrice >= 0
+        && d.currentPrice is number && d.currentPrice >= 0
+        && (absent(d, 'memo') || d.memo == null || d.memo is string);
+    }
+
+    function validTransaction(d) {
+      return d.keys().hasAll(['amount', 'income', 'merchant', 'at'])
+        && d.amount is int && d.amount > 0
+        && d.income is bool
+        && d.merchant is string && d.merchant.size() >= 1 && d.merchant.size() <= 80
+        && (absent(d, 'category') || d.category is string)
+        && d.at is timestamp
+        && (absent(d, 'source') || d.source is string)
+        && (absent(d, 'confirmed') || d.confirmed is bool);
+    }
+
+    function validFixed(d) {
+      return d.keys().hasAll(['name', 'amount', 'day'])
+        && d.name is string && d.name.size() >= 1 && d.name.size() <= 60
+        && d.amount is int && d.amount > 0
+        && d.day is int && d.day >= 1 && d.day <= 31
+        && (absent(d, 'remind') || d.remind is bool);
+    }
+
+    function validNotice(d) {
+      return d.keys().hasAll(['raw', 'at'])
+        && d.raw is string && d.raw.size() <= 2000
+        && d.at is timestamp
+        && (absent(d, 'app') || d.app is string);
+    }
+
+    function validSnapshot(d) {
+      return d.keys().hasAll(['total', 'at'])
+        && d.total is int
+        && d.at is timestamp;
+    }
+
+    match /users/{uid} {
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid) && validUser(request.resource.data);
+
+      match /assets/{id} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validAsset(request.resource.data);
+      }
+      match /transactions/{id} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validTransaction(request.resource.data);
+      }
+      match /fixed/{id} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validFixed(request.resource.data);
+      }
+      match /notices/{id} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validNotice(request.resource.data);
+      }
+      match /snapshots/{id} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validSnapshot(request.resource.data);
+      }
+    }
+  }
+}

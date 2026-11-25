@@ -12,11 +12,13 @@ class Asset {
     this.updatedAt,
   });
 
-  static const categories = <String>['stock', 'cash', 'etf', 'crypto', 'other'];
+  static const categories = <String>['cash', 'deposit', 'stock', 'etf', 'fx', 'crypto', 'other'];
 
   static const categoryLabels = <String, String>{
     'stock': '주식',
     'cash': '현금',
+    'deposit': '예금',
+    'fx': '외화',
     'etf': 'ETF',
     'crypto': '가상자산',
     'other': '기타',
@@ -50,6 +52,25 @@ class Asset {
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
     );
   }
+
+  factory Asset.fromJson(String id, Map<String, dynamic> data) => Asset(
+    id: id,
+    name: data['name'] as String? ?? '',
+    category: data['category'] as String? ?? 'other',
+    quantity: (data['quantity'] as num?)?.toDouble() ?? 0,
+    purchasePrice: (data['purchasePrice'] as num?)?.toDouble() ?? 0,
+    currentPrice: (data['currentPrice'] as num?)?.toDouble() ?? 0,
+    memo: data['memo'] as String?,
+  );
+
+  Map<String, dynamic> toJson() => {
+    'name': name,
+    'category': category,
+    'quantity': quantity,
+    'purchasePrice': purchasePrice,
+    'currentPrice': currentPrice,
+    if (memo != null) 'memo': memo,
+  };
 
   static String? validate({
     required String name,

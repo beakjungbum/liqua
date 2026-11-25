@@ -2,91 +2,48 @@ import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:mm_app/firebase_options.dart';
-import 'package:mm_app/theme/app_theme.dart';
-import 'package:mm_app/screens/splash_screen.dart';
+import 'package:mm_app/screens/gate.dart';
 import 'package:mm_app/services/auth_service.dart';
+import 'package:mm_app/services/device_service.dart';
+import 'package:mm_app/theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // 1. Firebase 초기화
   try {
     if (Firebase.apps.isEmpty) {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
+      await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
     }
-    debugPrint('Firebase 초기화 성공');
-  } catch (e, stackTrace) {
-    debugPrint('Firebase 초기화 실패: $e');
-    debugPrintStack(stackTrace: stackTrace);
-    runApp(const FirebaseInitializationErrorApp());
-    return;
-  }
-
-  // 2. App Check 초기화
-  // 기존 프로젝트에서 사용하던 Provider 설정을 유지합니다.
-  try {
     await FirebaseAppCheck.instance.activate(
-      providerAndroid: kDebugMode
-          ? const AndroidDebugProvider()
-          : const AndroidPlayIntegrityProvider(),
-      providerApple: kDebugMode
-          ? const AppleDebugProvider()
-          : const AppleDeviceCheckProvider(),
+      providerAndroid: kDebugMode ? const AndroidDebugProvider() : const AndroidPlayIntegrityProvider(),
+      providerApple: kDebugMode ? const AppleDebugProvider() : const AppleDeviceCheckProvider(),
       providerWeb: kDebugMode ? WebDebugProvider() : null,
     );
-
-    debugPrint('App Check 초기화 성공');
-  } catch (e, stackTrace) {
-    debugPrint('App Check 초기화 실패: $e');
-    debugPrintStack(stackTrace: stackTrace);
+    AuthService.instance.listenToAuthState();
+  } catch (e) {
+    // 초기화에 실패해도 둘러보기는 쓸 수 있다.
+    debugPrint('Firebase 초기화 실패: $e');
   }
-
-  // 3. Firebase 초기화 완료 후 인증 상태 구독
-  AuthService.instance.listenToAuthState();
-
-  // 4. 앱 실행
-  runApp(const MainApp());
+  try {
+    await DeviceService.instance.init();
+  } catch (e) {
+    debugPrint('알림 초기화 실패: $e');
+  }
+  runApp(const LiquaApp());
 }
 
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
-
+class LiquaApp extends StatelessWidget {
+  const LiquaApp({super.key, this.home = const Gate()});
+  final Widget home;
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      home: const SplashScreen(),
-    );
-  }
-}
-
-class FirebaseInitializationErrorApp extends StatelessWidget {
-  const FirebaseInitializationErrorApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      home: const Scaffold(
-        body: Center(
-          child: Padding(
-            padding: EdgeInsets.all(24),
-            child: Text(
-              'Firebase 초기화에 실패했습니다.\n\n'
-              'firebase_options.dart 설정과\n'
-              '터미널의 오류 메시지를 확인한 후\n'
-              '앱을 완전히 종료하고 다시 실행하세요.',
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => MaterialApp(
+        title: 'Liqua',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light,
+        locale: const Locale('ko', 'KR'),
+        supportedLocales: const [Locale('ko', 'KR')],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
+        home: home,
+      );
 }
