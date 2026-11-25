@@ -6,11 +6,13 @@ import 'package:mm_app/domain/money.dart';
 import 'package:mm_app/screens/book_screen.dart';
 import 'package:mm_app/screens/chat_screen.dart';
 import 'package:mm_app/screens/settings_screen.dart';
+import 'package:mm_app/services/device_service.dart';
 import 'package:mm_app/theme/app_theme.dart';
 import 'package:mm_app/ui/widgets.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key, required this.onExit, required this.go});
+  const HomeScreen({super.key, required this.onExit, required this.go, this.scroll});
+  final ScrollController? scroll;
   final VoidCallback onExit;
   final void Function(int) go;
 
@@ -19,14 +21,22 @@ class HomeScreen extends StatelessWidget {
     final m = AppScope.of(context);
     final cats = m.monthByCategory;
     final shares = percentShares([for (final c in cats) c.$2]);
-    return ListView(padding: EdgeInsets.fromLTRB(20, 8, 20, 24), children: [
+    final todo = [
+      if (m.pending.isNotEmpty) TodoRow(Icons.mark_email_unread_rounded, '확인이 필요한 결제', '${m.pending.length}건', strong: true, onTap: () => go(1)),
+      for (final f in m.fixed)
+        if (daysBetween(m.today, f.nextDue(m.today)) <= 1)
+          TodoRow(Icons.notifications_none_rounded, '${daysBetween(m.today, f.nextDue(m.today)) == 0 ? '오늘' : '내일'} ${f.name}', won(f.amount), onTap: () => push(context, FixedScreen())),
+    ];
+    return RefreshPage(
+        also: () => m.demo ? Future<void>.value() : DeviceService.instance.drain(m),
+        child: ListView(controller: scroll, physics: AlwaysScrollableScrollPhysics(), padding: EdgeInsets.fromLTRB(20, 8, 20, 96), children: [
       Row(children: [
         Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(m.demo ? '내 자산 (예시 데이터)' : '내 자산', style: TextStyle(color: AppColors.sub, fontWeight: FontWeight.w600)),
           Won(m.total, size: 32),
         ])),
-        IconButton(tooltip: '설정', onPressed: () => push(context, SettingsScreen(onExit: onExit)), icon: CircleAvatar(backgroundColor: AppColors.sage, child: Icon(Icons.person, color: AppColors.ink))),
+        IconButton(tooltip: '설정', onPressed: () => push(context, SettingsScreen(onExit: onExit)), icon: CircleAvatar(backgroundColor: AppColors.sage, child: Icon(Icons.person_rounded, color: AppColors.ink))),
       ]),
       SizedBox(height: 12),
       TodayCard(onTap: () => push(context, BudgetDetail())),
@@ -42,24 +52,19 @@ class HomeScreen extends StatelessWidget {
             SizedBox(height: 8),
             Between(Text('목표 ${won(m.target)}', style: TextStyle(color: AppColors.sub, fontSize: 13)), Text(m.total >= m.target ? '달성했어요' : '${won(m.target - m.total)} 남음', textAlign: TextAlign.end, style: TextStyle(color: AppColors.sub, fontSize: 13))),
           ])),
-      if (m.pending.isNotEmpty)
+      if (todo.isNotEmpty)
         SoftCard(
-            color: AppColors.accentSoft, padding: EdgeInsets.symmetric(horizontal: 18, vertical: 14), onTap: () => go(1),
-            child: Text('확인이 필요한 결제 알림 ${m.pending.length}건', style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w700))),
-      for (final f in m.fixed)
-        if (daysBetween(m.today, f.nextDue(m.today)) <= 1)
-          SoftCard(
-              padding: EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-              child: Row(children: [
-                Icon(Icons.notifications_none, size: 20, color: AppColors.olive),
-                SizedBox(width: 10),
-                Expanded(child: Text('${daysBetween(m.today, f.nextDue(m.today)) == 0 ? '오늘' : '내일'} ${f.name} 결제일')),
-                Text(won(f.amount), style: TextStyle(fontWeight: FontWeight.w700)),
-              ])),
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              ...todo.take(3),
+              if (todo.length > 3) Padding(padding: EdgeInsets.only(bottom: 12), child: Text('${todo.length - 3}개 더 있어요', style: TextStyle(color: AppColors.sub, fontSize: 13))),
+            ])),
+      // 위는 오늘 할 일, 아래는 지난 소비. 묶음 사이를 더 띄운다(근접성).
+      SizedBox(height: 12),
       SoftCard(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('이번 달 소비', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-        SizedBox(height: 14),
+        SizedBox(height: 16),
         if (cats.isEmpty)
           Empty('아직 이번 달 기록이 없어요')
         else
@@ -88,7 +93,7 @@ class HomeScreen extends StatelessWidget {
         if (m.txns.isEmpty) Empty('결제 알림을 켜면 여기에 쌓여요') else for (final t in m.txns.take(3)) TxnRow(t),
       ])),
       _says(context, m),
-    ]);
+    ]));
   }
 
   Widget _says(BuildContext c, AppModel m) {
@@ -116,7 +121,7 @@ class TodayCard extends StatelessWidget {
               m.todayCarry == 0
                   ? SizedBox.shrink()
                   : Container(
-                      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(color: Colors.white54, borderRadius: BorderRadius.circular(20)),
                       child: Text('이월 ${m.todayCarry > 0 ? '+' : ''}${won(m.todayCarry)}', style: TextStyle(color: AppColors.ink, fontSize: 12)))),
           Won(left.abs(), size: 42, color: AppColors.ink),
@@ -135,7 +140,7 @@ class BudgetDetail extends StatelessWidget {
     final m = AppScope.of(context);
     final p = m.plan!;
     Widget row(String a, String b, {bool bold = false}) => Padding(
-        padding: EdgeInsets.symmetric(vertical: 9),
+        padding: EdgeInsets.symmetric(vertical: 8),
         child: Row(children: [Expanded(child: Text(a)), Text(b, style: TextStyle(fontWeight: bold ? FontWeight.w800 : FontWeight.w600))]));
     return Scaffold(
         appBar: AppBar(title: Text('하루 생활비')),
@@ -155,7 +160,7 @@ class BudgetDetail extends StatelessWidget {
           ])),
           if (m.todayLeft > 0) ...[
             Text('오늘 남은 돈은 그대로 두면 내일로 넘어가요.', style: TextStyle(color: AppColors.sub)),
-            SizedBox(height: 10),
+            SizedBox(height: 8),
             SaveButton('${won(m.todayLeft)} 목표 저축으로 보내기', () async {
               await attempt(context, () async {
                 final v = await m.sendLeftoverToSaving(m.todayLeft);
@@ -187,13 +192,13 @@ class _InsightScreenState extends State<InsightScreen> {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('이번 달 지출', style: TextStyle(fontWeight: FontWeight.w700)),
             Won(m.monthTotal),
-            SizedBox(height: 10),
+            SizedBox(height: 8),
             for (final (i, c) in cats.indexed)
               Padding(
-                  padding: EdgeInsets.symmetric(vertical: 7),
+                  padding: EdgeInsets.symmetric(vertical: 8),
                   child: Column(children: [
                     Between(Text(c.$1.label), Text('${won(c.$2)}  ${shares[i]}%', style: TextStyle(fontWeight: FontWeight.w600))),
-                    SizedBox(height: 5),
+                    SizedBox(height: 4),
                     Bar(shares[i] / 100, height: 7),
                   ])),
           ])),

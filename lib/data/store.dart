@@ -32,6 +32,9 @@ abstract class Store {
   Future<void> remove(String collection, String id) => commit([Op.remove(collection, id)]);
   Future<void> mergeUser(Json data) => commit([Op.user(data)]);
   String newId();
+
+  /// 캐시가 아니라 서버 값을 다시 읽는다.
+  Future<void> refresh() async {}
 }
 
 Object? _fromFire(Object? v) => switch (v) {
@@ -85,6 +88,13 @@ class FirestoreStore extends Store {
     });
     await f.timeout(const Duration(seconds: 3), onTimeout: () => late = true);
   }
+
+  @override
+  Future<void> refresh() => Future.wait([
+        _user.get(const GetOptions(source: Source.server)),
+        for (final c in const ['transactions', 'assets', 'fixed', 'notices', 'snapshots'])
+          _user.collection(c).get(const GetOptions(source: Source.server)),
+      ]).timeout(const Duration(seconds: 8));
 
   @override
   String newId() => _db.collection('_').doc().id;

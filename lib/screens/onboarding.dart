@@ -77,7 +77,10 @@ class _InterviewScreenState extends State<InterviewScreen> {
     return Scaffold(
         appBar: AppBar(
             title: Text('첫 인터뷰'),
-            actions: [if (widget.onExit != null) TextButton(onPressed: widget.onExit, child: Text('나가기'))],
+            actions: [
+              Center(child: Text('${done ? Ask.values.length : step + 1} / ${Ask.values.length}', style: TextStyle(color: AppColors.sub, fontWeight: FontWeight.w700))),
+              SizedBox(width: 12),
+              if (widget.onExit != null) TextButton(onPressed: widget.onExit, child: Text('나가기'))],
             bottom: PreferredSize(preferredSize: Size.fromHeight(6), child: Bar(step / Ask.values.length, height: 6))),
         body: SafeArea(
             child: Column(children: [
@@ -99,7 +102,7 @@ class _InterviewScreenState extends State<InterviewScreen> {
                   Expanded(
                       child: SaveButton('맞아요', () async {
                     final ok = await attempt(context, () => m.saveProfile(p));
-                    if (ok && context.mounted && widget.onExit == null) Navigator.pop(context);
+                    if (ok && context.mounted && widget.onExit == null) closeThis(context);
                   })),
                 ]))
           else ...[
@@ -110,7 +113,7 @@ class _InterviewScreenState extends State<InterviewScreen> {
                     for (final o in questions[ask]!.$2) Padding(padding: EdgeInsets.only(right: 8), child: ActionChip(label: Text(o), onPressed: () => send(o)))
                   ])),
             Padding(
-                padding: EdgeInsets.fromLTRB(20, 4, 12, 14),
+                padding: EdgeInsets.fromLTRB(20, 4, 12, 16),
                 child: Row(children: [
                   Expanded(child: TextField(controller: input, onSubmitted: send, textInputAction: TextInputAction.send, decoration: InputDecoration(hintText: '편하게 답해 주세요'))),
                   IconButton(tooltip: '보내기', onPressed: () => send(input.text), icon: Icon(Icons.arrow_upward_rounded, color: AppColors.olive)),
@@ -129,7 +132,7 @@ class Bubble extends StatelessWidget {
   Widget build(BuildContext context) => Align(
       alignment: me ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-          margin: EdgeInsets.only(bottom: 10, left: me ? 48 : 0, right: me ? 0 : 32),
+          margin: EdgeInsets.only(bottom: 8, left: me ? 48 : 0, right: me ? 0 : 32),
           padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
               color: me ? AppColors.main : AppColors.card,
@@ -217,7 +220,7 @@ class _PlanScreenState extends State<PlanScreen> {
                       onChanged: (v) => setState(() => payday = v)),
                   if (old != null && !widget.first)
                     SwitchListTile(contentPadding: EdgeInsets.zero, value: restart, onChanged: (v) => setState(() => restart = v), title: Text('오늘부터 새 기간 시작'), subtitle: Text('켜면 이월과 초과를 처음부터 다시 세요')),
-                  SizedBox(height: 18),
+                  SizedBox(height: 16),
                   if (l != null && l > 0)
                     SoftCard(
                         color: AppColors.mist,
@@ -234,9 +237,9 @@ class _PlanScreenState extends State<PlanScreen> {
                       if (widget.first) await m.setTarget(parseWon(target.text)!);
                       await m.saveSettings(draft);
                     });
-                    if (ok && context.mounted && !widget.first) Navigator.pop(context);
+                    if (ok && context.mounted && !widget.first) closeThis(context);
                   }),
-                  if (widget.first) Padding(padding: EdgeInsets.only(top: 10), child: Text('다 채우면 ${PetStage.seed.label} 펫을 만나요', textAlign: TextAlign.center, style: TextStyle(color: AppColors.sub))),
+                  if (widget.first) Padding(padding: EdgeInsets.only(top: 8), child: Text('다 채우면 ${PetStage.seed.label} 펫을 만나요', textAlign: TextAlign.center, style: TextStyle(color: AppColors.sub))),
                 ]))));
   }
 }

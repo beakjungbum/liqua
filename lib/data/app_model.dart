@@ -247,6 +247,25 @@ class AppModel extends ChangeNotifier {
   bool _leftover(Txn t) => t.kind == TxnKind.saving && t.source == leftoverSource;
   Future<void> confirmTxn(Txn t) => updateTxn(t.copyWith(confirmed: true));
 
+  Future<void> refresh() => store.refresh();
+
+  /// 밀어서 지운 기록을 그대로 되살린다.
+  Future<void> restoreTxn(Txn t) => store.set('transactions', t.id, t.toJson());
+
+  /// 최근 30일 동안 자주 쓴 분류부터.
+  List<Category> get frequentCategories {
+    final from = DateTime(today.year, today.month, today.day - 30);
+    final n = <Category, int>{};
+    for (final t in expenses.where((t) => t.at.isAfter(from))) {
+      n[t.category] = (n[t.category] ?? 0) + 1;
+    }
+    final order = [...Category.values]..sort((a, b) {
+        final d = (n[b] ?? 0) - (n[a] ?? 0);
+        return d != 0 ? d : a.index - b.index;
+      });
+    return order.take(4).toList();
+  }
+
   /// 저축 기록을 지우면 저축 자산에 더했던 금액도 되돌린다.
   Future<void> deleteTxn(String id) => _serial(() async {
         final t = txns.where((x) => x.id == id).firstOrNull;

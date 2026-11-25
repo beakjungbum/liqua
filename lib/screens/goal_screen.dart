@@ -7,7 +7,8 @@ import 'package:mm_app/theme/app_theme.dart';
 import 'package:mm_app/ui/widgets.dart';
 
 class GoalScreen extends StatefulWidget {
-  const GoalScreen({super.key});
+  const GoalScreen({super.key, this.scroll});
+  final ScrollController? scroll;
   @override
   State<GoalScreen> createState() => _GoalScreenState();
 }
@@ -19,22 +20,22 @@ class _GoalScreenState extends State<GoalScreen> {
     final m = AppScope.of(context);
     final months = monthsToGoal(current: m.total, goal: m.target, monthly: m.monthlySaving, annualRate: rate);
     final when = months == null ? null : DateTime(m.today.year, m.today.month + months);
-    return ListView(padding: EdgeInsets.fromLTRB(20, 14, 20, 28), children: [
+    return RefreshPage(child: ListView(controller: widget.scroll, physics: AlwaysScrollableScrollPhysics(), padding: EdgeInsets.fromLTRB(20, 16, 20, 96), children: [
       Text('나의 목표', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
-      SizedBox(height: 14),
+      SizedBox(height: 16),
       SoftCard(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('내가 모으고 싶은 금액${m.profile.goalReason == null ? '' : ' · ${m.profile.goalReason}'}', style: TextStyle(color: AppColors.sub)),
         Won(m.target, size: 34),
         SizedBox(height: 8),
         Bar(m.percent / 100),
-        SizedBox(height: 10),
+        SizedBox(height: 8),
         Row(children: [
           Expanded(child: Text('모은 금액 ${won(m.total)}', style: TextStyle(fontWeight: FontWeight.w700))),
           Text('${percentText(m.percent)}%', style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.text)),
         ]),
       ])),
-      FilledButton(onPressed: () => sheet<void>(context, _TargetForm()), child: Text('목표 수정하기')),
+      FilledButton(style: tonal(), onPressed: () => sheet<void>(context, TargetForm()), child: Text('목표 수정하기')),
       SizedBox(height: 12),
       SoftCard(
           color: AppColors.mist,
@@ -43,23 +44,23 @@ class _GoalScreenState extends State<GoalScreen> {
               Expanded(child: Text('${m.stage.label} 단계', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800))),
               Text('Lv.${m.level}', style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.text)),
             ]),
-            SizedBox(height: 6),
+            SizedBox(height: 8),
             Mascot(stage: m.stage, size: 150, percent: m.percent, crowns: m.completedGoals, worried: m.over),
-            SizedBox(height: 10),
+            SizedBox(height: 8),
             Row(children: [
               for (final s in PetStage.values.skip(1))
                 Expanded(
                     child: Column(children: [
                   Container(width: s == m.stage ? 16 : 11, height: s == m.stage ? 16 : 11, decoration: BoxDecoration(shape: BoxShape.circle, color: s == m.stage ? AppColors.orange : s.index < m.stage.index ? AppColors.olive : AppColors.card)),
-                  SizedBox(height: 5),
+                  SizedBox(height: 4),
                   Text(s.label, style: TextStyle(fontSize: 12, fontWeight: s == m.stage ? FontWeight.w800 : FontWeight.w500, color: s == m.stage ? AppColors.text : AppColors.sub)),
                 ])),
             ]),
             SizedBox(height: 12),
             Text(m.stage.next, textAlign: TextAlign.center),
-            SizedBox(height: 10),
+            SizedBox(height: 8),
             Bar((m.xp - xpForLevel(m.level)) / (xpForLevel(m.level + 1) - xpForLevel(m.level)), height: 7, track: AppColors.card),
-            SizedBox(height: 5),
+            SizedBox(height: 4),
             Text('경험치 ${m.xp} / ${xpForLevel(m.level + 1)} · ${m.streakDays}일 연속 기록', style: TextStyle(fontSize: 12, color: AppColors.sub)),
           ])),
       SoftCard(
@@ -78,22 +79,22 @@ class _GoalScreenState extends State<GoalScreen> {
       SoftCard(
           onTap: () => push(context, GuideScreen()),
           child: Row(children: [
-            IconTile(Icons.card_giftcard),
+            IconTile(Icons.card_giftcard_rounded),
             SizedBox(width: 12),
             Expanded(child: Text('받을 수 있는 지원 혜택과 투자 정보', style: TextStyle(fontWeight: FontWeight.w700))),
-            Icon(Icons.chevron_right, color: AppColors.sub),
+            Icon(Icons.chevron_right_rounded, color: AppColors.sub),
           ])),
-    ]);
+    ]));
   }
 }
 
-class _TargetForm extends StatefulWidget {
-  const _TargetForm();
+class TargetForm extends StatefulWidget {
+  const TargetForm({super.key});
   @override
-  State<_TargetForm> createState() => _TargetFormState();
+  State<TargetForm> createState() => _TargetFormState();
 }
 
-class _TargetFormState extends State<_TargetForm> {
+class _TargetFormState extends State<TargetForm> {
   final form = GlobalKey<FormState>();
   late final c = TextEditingController(text: comma(AppScope.read(context).target));
   @override
@@ -110,7 +111,7 @@ class _TargetFormState extends State<_TargetForm> {
         SaveButton('저장', () async {
           if (!form.currentState!.validate()) return;
           final ok = await attempt(context, () => AppScope.read(context).setTarget(parseWon(c.text)!));
-          if (ok && context.mounted) Navigator.pop(context);
+          if (ok && context.mounted) closeThis(context);
         }),
       ]));
 }

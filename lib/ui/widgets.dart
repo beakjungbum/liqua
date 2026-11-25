@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -25,7 +26,7 @@ Future<T?> sheet<T>(BuildContext c, Widget child) {
   return showModalBottomSheet<T>(
       context: c, isScrollControlled: true, useSafeArea: true, showDragHandle: true, backgroundColor: AppColors.background,
       builder: (x) => AppScope(model: m, child: Padding(
-          padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + MediaQuery.viewInsetsOf(x).bottom), child: SingleChildScrollView(child: child))));
+          padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + MediaQuery.viewInsetsOf(x).bottom + MediaQuery.viewPaddingOf(c).bottom), child: SingleChildScrollView(child: child))));
 }
 
 /// 99.6% 를 100% 로 올려 보이지 않는다.
@@ -34,31 +35,47 @@ String percentText(double p) => p < 10 ? '${(p * 10).floor() / 10}' : '${p.clamp
 /// 제스처 바에 가리지 않게 아래 여백을 더한다.
 EdgeInsets pagePad(BuildContext c) => EdgeInsets.fromLTRB(20, 20, 20, 20 + MediaQuery.paddingOf(c).bottom);
 
+/// 저장하는 사이 경고가 위에 떠도 경고가 아니라 이 화면을 닫는다.
+void closeThis(BuildContext c) {
+  final r = ModalRoute.of(c);
+  if (r == null) return;
+  r.isCurrent ? Navigator.pop(c) : Navigator.of(c).removeRoute(r);
+}
+
 void toast(BuildContext c, String s) => ScaffoldMessenger.of(c)
   ..hideCurrentSnackBar()
   ..showSnackBar(SnackBar(content: Text(s)));
 
 /// 저장이 실패하면 이유를 보이고 화면을 그대로 둔다.
-Future<bool> attempt(BuildContext c, Future<void> Function() f) async {
-  try {
-    await f();
-    return true;
-  } catch (e) {
-    if (c.mounted) toast(c, saveError(e));
-    return false;
-  }
+/// 0.4초 안에 답한다(도허티 임계). 그 뒤에 온 실패는 나중에 알린다.
+Future<bool> attempt(BuildContext c, Future<void> Function() f) {
+  final messenger = ScaffoldMessenger.of(c);
+  final done = Completer<bool>();
+  final timer = Timer(const Duration(milliseconds: 400), () {
+    if (!done.isCompleted) done.complete(true);
+  });
+  f().then((_) {
+    HapticFeedback.lightImpact();
+    if (!done.isCompleted) done.complete(true);
+  }, onError: (Object e) {
+    if (!done.isCompleted) done.complete(false);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(saveError(e))));
+  }).whenComplete(timer.cancel);
+  return done.future;
 }
 
 String saveError(Object e) {
   final s = e.toString();
   if (s.contains('permission-denied')) return '저장 권한이 없어요. 다시 로그인해 주세요.';
-  if (s.contains('unavailable')) return '네트워크에 연결할 수 없어요. 연결되면 다시 시도해 주세요.';
+  if (s.contains('unavailable') || e is TimeoutException) return '네트워크에 연결할 수 없어요. 연결되면 다시 시도해 주세요.';
   if (e is ArgumentError) return '${e.message}';
   return '저장하지 못했어요. 잠시 뒤 다시 시도해 주세요.';
 }
 
 class SoftCard extends StatelessWidget {
-  const SoftCard({super.key, required this.child, this.color, this.padding = const EdgeInsets.all(18), this.onTap});
+  const SoftCard({super.key, required this.child, this.color, this.padding = const EdgeInsets.all(16), this.onTap});
   final Widget child;
   final Color? color;
   final EdgeInsets padding;
@@ -335,14 +352,14 @@ class MascotSays extends StatelessWidget {
     final m = AppScope.of(context);
     return SoftCard(
         color: worried ? AppColors.accentSoft : AppColors.mist,
-        padding: EdgeInsets.fromLTRB(10, 6, 14, 6),
+        padding: EdgeInsets.fromLTRB(8, 8, 16, 8),
         onTap: onTap,
         child: Row(children: [
           Mascot(stage: m.stage, size: 84, percent: m.percent, crowns: m.completedGoals, worried: worried),
           SizedBox(width: 8),
           Expanded(
               child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(color: AppColors.card, borderRadius: BorderRadius.circular(20)),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(title, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: worried ? AppColors.accent : AppColors.text)),
@@ -353,15 +370,15 @@ class MascotSays extends StatelessWidget {
 }
 
 IconData categoryIcon(Category c) => switch (c) {
-      Category.food => Icons.restaurant_outlined,
-      Category.cafe => Icons.local_cafe_outlined,
-      Category.transport => Icons.directions_bus_outlined,
-      Category.shopping => Icons.shopping_bag_outlined,
-      Category.living => Icons.home_repair_service_outlined,
-      Category.health => Icons.favorite_border,
-      Category.culture => Icons.movie_outlined,
-      Category.fixed => Icons.event_repeat_outlined,
-      Category.etc => Icons.more_horiz,
+      Category.food => Icons.restaurant_rounded,
+      Category.cafe => Icons.local_cafe_rounded,
+      Category.transport => Icons.directions_bus_rounded,
+      Category.shopping => Icons.shopping_bag_rounded,
+      Category.living => Icons.home_repair_service_rounded,
+      Category.health => Icons.favorite_rounded,
+      Category.culture => Icons.movie_rounded,
+      Category.fixed => Icons.event_repeat_rounded,
+      Category.etc => Icons.more_horiz_rounded,
     };
 
 /// 양 끝에 놓고, 자리가 모자라면 아래로 내린다.
@@ -380,8 +397,8 @@ class IconTile extends StatelessWidget {
   final Color? color;
   @override
   Widget build(BuildContext context) => Container(
-      width: 40, height: 40, decoration: BoxDecoration(color: color ?? AppColors.mist, borderRadius: BorderRadius.circular(13)),
-      child: Icon(icon, size: 21, color: AppColors.deep));
+      width: 44, height: 44, decoration: BoxDecoration(color: color ?? AppColors.mist, borderRadius: BorderRadius.circular(13)),
+      child: Icon(icon, size: 24, color: AppColors.text));
 }
 
 /// 천 단위 쉼표를 넣어 주는 금액 칸.
@@ -437,7 +454,114 @@ class _SaveButtonState extends State<SaveButton> {
                   await widget.onSave();
                   if (mounted) setState(() => busy = false);
                 },
-          child: busy ? SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2.4, color: AppColors.ink)) : Text(widget.label)));
+          child: Text(busy ? '저장하는 중' : widget.label)));
+}
+
+/// 주황 버튼은 화면에 하나만 둔다(폰 레스토프 효과). 나머지는 이 모양을 쓴다.
+ButtonStyle tonal() => FilledButton.styleFrom(backgroundColor: AppColors.mist, foregroundColor: AppColors.text);
+
+/// 들어올 내용과 같은 자리를 먼저 보여 준다.
+class Skeleton extends StatefulWidget {
+  const Skeleton({super.key, this.width = double.infinity, this.height = 16, this.radius = 8});
+  final double width, height, radius;
+  @override
+  State<Skeleton> createState() => _SkeletonState();
+}
+
+class _SkeletonState extends State<Skeleton> with SingleTickerProviderStateMixin {
+  late final _a = AnimationController(vsync: this, duration: const Duration(milliseconds: 900), value: 1);
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    MediaQuery.disableAnimationsOf(context) ? _a.stop() : _a.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _a.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => FadeTransition(
+      opacity: Tween(begin: .45, end: 1.0).animate(_a),
+      child: Container(width: widget.width, height: widget.height, decoration: BoxDecoration(color: AppColors.mist, borderRadius: BorderRadius.circular(widget.radius))));
+}
+
+class HomeSkeleton extends StatelessWidget {
+  const HomeSkeleton({super.key});
+  @override
+  Widget build(BuildContext context) => Semantics(
+      label: '불러오는 중',
+      child: ListView(physics: NeverScrollableScrollPhysics(), padding: EdgeInsets.fromLTRB(20, 16, 20, 0), children: [
+        Align(alignment: Alignment.centerLeft, child: Skeleton(width: 88)),
+        SizedBox(height: 8),
+        Align(alignment: Alignment.centerLeft, child: Skeleton(width: 200, height: 36)),
+        SizedBox(height: 16),
+        Skeleton(height: 168, radius: 22),
+        SizedBox(height: 12),
+        Skeleton(height: 112, radius: 22),
+        SizedBox(height: 24),
+        Skeleton(height: 224, radius: 22),
+      ]));
+}
+
+/// 당겨서 새로고침. 실패하면 이유를 알린다.
+class RefreshPage extends StatelessWidget {
+  const RefreshPage({super.key, required this.child, this.also});
+  final Widget child;
+  final Future<void> Function()? also;
+  @override
+  Widget build(BuildContext context) => RefreshIndicator(
+      color: AppColors.ink,
+      backgroundColor: AppColors.main,
+      onRefresh: () async {
+        HapticFeedback.selectionClick();
+        final m = AppScope.read(context);
+        try {
+          await Future.wait([m.refresh(), if (also != null) also!()]);
+        } catch (e) {
+          if (context.mounted) toast(context, saveError(e));
+        }
+      },
+      child: child);
+}
+
+/// 홈의 「오늘 할 일」 한 줄.
+class TodoRow extends StatelessWidget {
+  const TodoRow(this.icon, this.text, this.value, {super.key, this.onTap, this.strong = false});
+  final IconData icon;
+  final String text, value;
+  final VoidCallback? onTap;
+  final bool strong;
+  @override
+  Widget build(BuildContext context) => InkWell(
+      onTap: onTap,
+      child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: 48),
+          child: Row(children: [
+            Icon(icon, size: 24, color: strong ? AppColors.accent : AppColors.olive),
+            SizedBox(width: 12),
+            Expanded(child: Text(text, style: TextStyle(fontWeight: FontWeight.w600, color: strong ? AppColors.accent : AppColors.text))),
+            SizedBox(width: 8),
+            Text(value, style: TextStyle(fontWeight: FontWeight.w700)),
+          ])));
+}
+
+/// 분류마다 같은 색을 써서 글자를 읽기 전에 알아본다.
+Color categoryTint(Category c) {
+  final base = switch (c) {
+    Category.food => AppColors.peach,
+    Category.cafe => Color(0xFFD9C9A3),
+    Category.transport => Color(0xFFA9C2C4),
+    Category.shopping => Color(0xFFE8B7B0),
+    Category.living => AppColors.sage,
+    Category.health => Color(0xFFB9D0AE),
+    Category.culture => Color(0xFFC6BBD6),
+    Category.fixed => AppColors.main,
+    Category.etc => Color(0xFFCCCFC2),
+  };
+  return Color.lerp(AppColors.card, base, AppColors.dark ? .38 : .62)!;
 }
 
 class Empty extends StatelessWidget {
@@ -445,6 +569,6 @@ class Empty extends StatelessWidget {
   final String text;
   @override
   Widget build(BuildContext context) => Padding(
-      padding: EdgeInsets.symmetric(vertical: 18),
+      padding: EdgeInsets.symmetric(vertical: 16),
       child: Center(child: Text(text, textAlign: TextAlign.center, style: TextStyle(color: AppColors.sub, height: 1.5))));
 }

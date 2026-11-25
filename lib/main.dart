@@ -82,6 +82,10 @@ class _LiquaAppState extends State<LiquaApp> with WidgetsBindingObserver {
         locale: const Locale('ko', 'KR'),
         supportedLocales: const [Locale('ko', 'KR')],
         localizationsDelegates: GlobalMaterialLocalizations.delegates,
+        // 태블릿과 펼친 폴더블에서도 한 줄이 너무 길어지지 않게 한다.
+        builder: (_, child) => ColoredBox(
+            color: AppColors.background,
+            child: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 600), child: child))),
         home: widget.home,
       );
 }

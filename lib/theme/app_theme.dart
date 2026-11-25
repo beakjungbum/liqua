@@ -25,7 +25,7 @@ abstract final class AppColors {
   static Color get accent => _p(0xFFA63C0B, 0xFFEFB18D);
   static Color get accentSoft => _p(0xFFFCEBDF, 0xFF3A2417);
 
-  static const chart = [Color(0xFF777D58), main, peach, sage, orange, Color(0xFF5A6B4F), Color(0xFFD9C9A3), Color(0xFF94A08A), Color(0xFFBFC7B5)];
+  static const chart = [Color(0xFF777D58), main, peach, sage, Color(0xFF4C5A45), Color(0xFFA9C2C4), Color(0xFFD9C9A3), Color(0xFF94A08A), Color(0xFFBFC7B5)];
 }
 
 class AppTheme {

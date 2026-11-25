@@ -5,8 +5,12 @@ import 'package:mm_app/services/fx_service.dart';
 import 'package:mm_app/theme/app_theme.dart';
 import 'package:mm_app/ui/widgets.dart';
 
+/// 자산 추가 화면이 쓰는 마지막 환율.
+FxQuote? lastFx;
+
 class AssetScreen extends StatefulWidget {
-  const AssetScreen({super.key});
+  const AssetScreen({super.key, this.scroll});
+  final ScrollController? scroll;
   @override
   State<AssetScreen> createState() => _AssetScreenState();
 }
@@ -31,6 +35,7 @@ class _AssetScreenState extends State<AssetScreen> {
     if (!mounted) return;
     setState(() {
       fx = q;
+      lastFx = q;
       loading = false;
     });
     if (q == null || q.stale) return;
@@ -58,11 +63,11 @@ class _AssetScreenState extends State<AssetScreen> {
     final diff = prev == null ? null : m.total - prev.total;
     final trend = [...m.snapshots.where((s) => s.at.isBefore(m.today)).map((s) => s.total), m.total];
     final fxSum = groups['fx'] ?? 0;
-    return RefreshIndicator(
-        onRefresh: refresh,
-        child: ListView(padding: EdgeInsets.fromLTRB(20, 14, 20, 28), children: [
+    return RefreshPage(
+        also: refresh,
+        child: ListView(controller: widget.scroll, physics: AlwaysScrollableScrollPhysics(), padding: EdgeInsets.fromLTRB(20, 16, 20, 96), children: [
           Text('나의 저축', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
-          SizedBox(height: 14),
+          SizedBox(height: 16),
           SoftCard(
               color: AppColors.main,
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -75,7 +80,7 @@ class _AssetScreenState extends State<AssetScreen> {
             SoftCard(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('자산 구성 비율', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-              SizedBox(height: 14),
+              SizedBox(height: 16),
               Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
                     for (final (i, k) in keys.indexed)
                       Expanded(
@@ -95,32 +100,26 @@ class _AssetScreenState extends State<AssetScreen> {
               Text('외화 자산', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               Won(fxSum, size: 24),
               Text('환율이 1% 오르면 +${won((fxSum * .01).round())}', style: TextStyle(color: AppColors.sub)),
-              SizedBox(height: 6),
+              SizedBox(height: 8),
               for (final c in Currency.values)
                 if (fx?.rates[c.code] != null && m.assets.any((a) => currencyOf(a) == c))
                   Text('${c.label} ${c.unit == 1 ? '' : '${c.unit}'}${c.code} = ${comma((fx!.rates[c.code]! * c.unit * 100).round() / 100)}원${fx!.change(c.code) == null ? '' : ' (${fx!.change(c.code)! >= 0 ? '+' : ''}${fx!.change(c.code)!.toStringAsFixed(2)}%)'}', style: TextStyle(fontSize: 13)),
               SizedBox(height: 4),
-              Text(loading ? '환율을 불러오는 중' : fx == null ? '환율을 불러오지 못했어요. 아래로 당겨 다시 시도해 주세요.' : '${fx!.source} ${fx!.date}${fx!.stale ? ' (연결이 끊겨 마지막 환율)' : ''}', style: TextStyle(fontSize: 12, color: fx?.stale ?? !loading && fx == null ? AppColors.accent : AppColors.sub)),
+              if (loading) Skeleton(width: 180) else Text(fx == null ? '환율을 불러오지 못했어요. 아래로 당겨 다시 시도해 주세요.' : '${fx!.source} ${fx!.date}${fx!.stale ? ' (연결이 끊겨 마지막 환율)' : ''}', style: TextStyle(fontSize: 12, color: fx?.stale ?? !loading && fx == null ? AppColors.accent : AppColors.sub)),
             ])),
-          SoftCard(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('자산 추가하기', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-            Text('새로운 자산을 등록해 보세요.', style: TextStyle(color: AppColors.sub)),
-            SizedBox(height: 12),
-            SizedBox(width: double.infinity, child: FilledButton(onPressed: () => sheet<void>(context, AssetForm(fx: fx)), child: Text('자산 추가하기'))),
-          ])),
+          SizedBox(height: 12),
           Section('보유 자산 목록'),
-          SizedBox(height: 6),
+          SizedBox(height: 8),
           SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(children: [
                 for (final k in ['all', ...keys]) Padding(padding: EdgeInsets.only(right: 8), child: ChoiceChip(label: Text(k == 'all' ? '전체' : Asset.categoryLabels[k] ?? k), selected: filter == k, onSelected: (_) => setState(() => filter = k)))
               ])),
-          SizedBox(height: 10),
-          if (shown.isEmpty) Empty('아직 등록한 자산이 없어요'),
+          SizedBox(height: 8),
+          if (shown.isEmpty) Empty('아직 등록한 자산이 없어요.\n아래 자산 추가 버튼으로 시작해 보세요.'),
           for (final a in shown)
             SoftCard(
-                color: AppColors.mist, padding: EdgeInsets.all(14), onTap: () => sheet<void>(context, AssetForm(edit: a, fx: fx)),
+                color: AppColors.mist, padding: EdgeInsets.all(16), onTap: () => sheet<void>(context, AssetForm(edit: a, fx: fx)),
                 child: Row(children: [
                   IconTile(_icon(a.category), color: AppColors.card),
                   SizedBox(width: 12),
@@ -144,13 +143,13 @@ class _AssetScreenState extends State<AssetScreen> {
 }
 
 IconData _icon(String c) => switch (c) {
-      'cash' => Icons.account_balance_wallet_outlined,
-      'deposit' => Icons.savings_outlined,
-      'stock' => Icons.show_chart,
-      'etf' => Icons.donut_small_outlined,
-      'fx' => Icons.currency_exchange,
-      'crypto' => Icons.currency_bitcoin,
-      _ => Icons.category_outlined,
+      'cash' => Icons.account_balance_wallet_rounded,
+      'deposit' => Icons.savings_rounded,
+      'stock' => Icons.show_chart_rounded,
+      'etf' => Icons.donut_small_rounded,
+      'fx' => Icons.currency_exchange_rounded,
+      'crypto' => Icons.currency_bitcoin_rounded,
+      _ => Icons.category_rounded,
     };
 
 class AssetForm extends StatefulWidget {
@@ -203,7 +202,7 @@ class _AssetFormState extends State<AssetForm> {
         key: form,
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(widget.edit == null ? '자산 추가' : '자산 고치기', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-          SizedBox(height: 14),
+          SizedBox(height: 16),
           Wrap(spacing: 8, children: [
             for (final c in Asset.categories) ChoiceChip(label: Text(Asset.categoryLabels[c]!), selected: category == c, onSelected: (_) => setState(() => category = c))
           ]),
@@ -238,13 +237,13 @@ class _AssetFormState extends State<AssetForm> {
                 purchasePrice: simple ? v : d(buy),
                 currentPrice: simple ? v : isFx && rate != null ? rate : d(cur),
                 memo: widget.edit?.memo)));
-            if (ok && context.mounted) Navigator.pop(context);
+            if (ok && context.mounted) closeThis(context);
           }),
           if (widget.edit != null)
             Center(child: TextButton(
                 onPressed: () async {
                   final ok = await attempt(context, () => m.deleteAsset(widget.edit!.id));
-                  if (ok && context.mounted) Navigator.pop(context);
+                  if (ok && context.mounted) closeThis(context);
                 },
                 child: Text('이 자산 지우기', style: TextStyle(color: AppColors.accent)))),
         ]));
