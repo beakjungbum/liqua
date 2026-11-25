@@ -10,6 +10,9 @@ import 'package:mm_app/services/device_service.dart';
 import 'package:mm_app/theme/app_theme.dart';
 import 'package:mm_app/ui/widgets.dart';
 
+/// 로그인 없이 알림 수신을 시험할 때만 켠다: --dart-define=CAPTURE_IN_DEMO=true
+const captureInDemo = bool.fromEnvironment('CAPTURE_IN_DEMO');
+
 class Shell extends StatefulWidget {
   const Shell({super.key, required this.onExit, this.initial = 0});
   final VoidCallback onExit;
@@ -33,14 +36,14 @@ class _ShellState extends State<Shell> with WidgetsBindingObserver {
     m.addListener(reschedule);
     final d = DeviceService.instance;
     // 둘러보기에서는 실제 알림을 읽지 않는다.
-    if (!m.demo) d.onArrived(() => d.drain(m));
+    if (!m.demo || captureInDemo) d.onArrived(() => d.drain(m));
     start();
   }
 
   Future<void> start() async {
     try {
       await m.snapshotToday();
-      if (!m.demo) await DeviceService.instance.drain(m);
+      if (!m.demo || captureInDemo) await DeviceService.instance.drain(m);
       reschedule();
     } catch (e) {
       debugPrint('시작 작업 실패: $e');
@@ -56,7 +59,7 @@ class _ShellState extends State<Shell> with WidgetsBindingObserver {
   }
 
   void onAlert(AppAlert a) {
-    if (!m.demo) DeviceService.instance.alert(a).catchError((Object e) => debugPrint('알림 실패: $e'));
+    if (!m.demo || captureInDemo) DeviceService.instance.alert(a).catchError((Object e) => debugPrint('알림 실패: $e'));
     if (!mounted) return;
     sheet<void>(
         context,

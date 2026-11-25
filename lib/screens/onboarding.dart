@@ -194,7 +194,7 @@ class _PlanScreenState extends State<PlanScreen> {
                   MoneyField(living, '다음 수입일까지 쓸 생활비', helper: '고정지출과 저축할 돈을 포함한 금액이에요'),
                   MoneyField(saving, '먼저 저축할 금액', allowZero: true),
                   if (widget.first) MoneyField(target, '모으고 싶은 목표 금액'),
-                  DropdownButtonFormField<int?>(
+                  DropdownButtonFormField<int?>(isExpanded: true, 
                       initialValue: payday,
                       decoration: const InputDecoration(labelText: '수입일'),
                       items: [

@@ -358,6 +358,16 @@ IconData categoryIcon(Category c) => switch (c) {
       Category.etc => Icons.more_horiz,
     };
 
+/// 양 끝에 놓고, 자리가 모자라면 아래로 내린다.
+class Between extends StatelessWidget {
+  const Between(this.a, this.b, {super.key});
+  final Widget a, b;
+  @override
+  Widget build(BuildContext context) => SizedBox(
+      width: double.infinity,
+      child: Wrap(alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center, spacing: 8, runSpacing: 2, children: [a, b]));
+}
+
 class IconTile extends StatelessWidget {
   const IconTile(this.icon, {super.key, this.color = AppColors.mist});
   final IconData icon;

@@ -11,7 +11,7 @@ Future<MemoryStore> demoStore(DateTime now) async {
     'displayName': '하늘', 'targetAmount': 5000000, 'points': 340,
     'celebrated': [10, 25], 'growth': {'completedGoals': 0},
     'profile': const Profile(age: 21, monthlyIncome: 1200000, region: '경기', experience: '처음', risk: '낮음', goalReason: '독립').toJson(),
-    'plan': PlanSettings(living: 900000, saving: 100000, start: d(10), payday: null).toJson(),
+    'plan': PlanSettings(living: 600000, saving: 100000, start: d(10), payday: null).toJson(),
   });
   Future<void> asset(String id, String n, String c, num q, num buy, num cur) =>
       s.set('assets', id, {'name': n, 'category': c, 'quantity': q, 'purchasePrice': buy, 'currentPrice': cur});

@@ -51,6 +51,15 @@ void main() {
     expect(got.single.body, contains('25,000원'));
     expect(m.tomorrowBudget, 24000);
   });
+  test('내일 몫까지 쓰면 음수 금액을 쓸 수 있는 돈이라고 하지 않는다', () async {
+    final m = await make();
+    final got = <AppAlert>[];
+    m.alerts.listen(got.add);
+    await pay(m, 100000, shop: '무신사');
+    await tick();
+    expect(got.single.body, isNot(contains('-')));
+    expect(got.single.body, contains('40,000원'));
+  });
   test('취소 알림은 원래 결제를 되돌린다', () async {
     final m = await make();
     await pay(m, 4500);

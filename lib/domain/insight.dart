@@ -42,7 +42,7 @@ List<Advice> advise(Iterable<Spend> all, DateTime now, int dailyBudget) {
   final out = <Advice>[
     if (flexible.isNotEmpty)
       Advice('${flexible.first.$1.label} 한도를 먼저 정해 보세요',
-          '이번 달 ${won(total)} 중 ${flexible.first.$1.label}이(가) ${won(flexible.first.$2)}, ${shares[cats.indexOf(flexible.first)]}%예요'),
+          '이번 달 ${won(total)} 중 ${flexible.first.$1.label}에 ${won(flexible.first.$2)}, ${shares[cats.indexOf(flexible.first)]}%를 썼어요'),
   ];
   final byDay = <int, int>{};
   for (final s in month.where((s) => s.category != Category.fixed)) {

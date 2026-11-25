@@ -28,7 +28,7 @@ class DeviceService {
     tz.setLocalLocation(tz.getLocation('Asia/Seoul'));
     await _local.initialize(
         settings: const InitializationSettings(
-            android: AndroidInitializationSettings('@mipmap/ic_launcher'), iOS: DarwinInitializationSettings()));
+            android: AndroidInitializationSettings('ic_stat'), iOS: DarwinInitializationSettings()));
     _ready = true;
   }
 

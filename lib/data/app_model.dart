@@ -197,7 +197,7 @@ class AppModel extends ChangeNotifier {
     await _award((newDay ? 10 : 2) + (t.kind == TxnKind.saving ? 20 : 0));
     if (!wasOver && over && t.kind == TxnKind.expense && dateOnly(t.at) == today) {
       _alerts.add(AppAlert(AlertKind.overBudget, '오늘 생활비를 ${won(-todayLeft)} 넘었어요',
-          '내일 쓸 수 있는 돈은 ${won(tomorrowBudget)}이에요'));
+          tomorrowBudget > 0 ? '내일 쓸 수 있는 돈은 ${won(tomorrowBudget)}이에요' : '내일 생활비까지 다 썼어요. 부족한 ${won(-tomorrowBudget)}은 그다음 날에서 빠져요'));
     }
   }
 

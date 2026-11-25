@@ -31,8 +31,8 @@ class TxnRow extends StatelessWidget {
               const SizedBox(width: 8),
               if (!t.confirmed)
                 IconButton(tooltip: '맞아요, 확정', onPressed: () => attempt(context, () => AppScope.read(context).confirmTxn(t)), icon: const Icon(Icons.check_circle_outline, color: AppColors.accent)),
-              Text('${t.kind == TxnKind.income ? '+' : '−'}${won(t.amount)}',
-                  style: TextStyle(fontWeight: FontWeight.w700, color: t.kind == TxnKind.income ? AppColors.olive : AppColors.text, fontFeatures: const [FontFeature.tabularFigures()])),
+              ConstrainedBox(constraints: const BoxConstraints(maxWidth: 120), child: FittedBox(fit: BoxFit.scaleDown, child: Text('${t.kind == TxnKind.income ? '+' : '−'}${won(t.amount)}',
+                  style: TextStyle(fontWeight: FontWeight.w700, color: t.kind == TxnKind.income ? AppColors.olive : AppColors.text, fontFeatures: const [FontFeature.tabularFigures()])))),
             ])));
   }
 }
@@ -84,10 +84,12 @@ class _BookScreenState extends State<BookScreen> with WidgetsBindingObserver {
       SliverPadding(
           padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
           sliver: SliverList.list(children: [
-            Row(children: [
-              const Expanded(child: Text('가계부', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800))),
-              TextButton(onPressed: () => push(context, const FixedScreen()), child: const Text('고정지출')),
-              FilledButton(onPressed: () => sheet<void>(context, const TxnForm()), style: FilledButton.styleFrom(minimumSize: const Size(64, 42)), child: const Text('기록')),
+            Wrap(alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center, runSpacing: 4, children: [
+              const Text('가계부', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
+              Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
+                TextButton(onPressed: () => push(context, const FixedScreen()), child: const Text('고정지출')),
+                FilledButton(onPressed: () => sheet<void>(context, const TxnForm()), style: FilledButton.styleFrom(minimumSize: const Size(64, 42)), child: const Text('기록')),
+              ]),
             ]),
             const SizedBox(height: 14),
             if (capture == false)
@@ -123,7 +125,7 @@ class _BookScreenState extends State<BookScreen> with WidgetsBindingObserver {
                     Text('확인 필요 · ${n.app} ${DateFormat('M/d HH:mm').format(n.at)}', style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 4),
                     Text(n.raw, style: const TextStyle(height: 1.4)),
-                    Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                    Wrap(alignment: WrapAlignment.end, children: [
                       TextButton(onPressed: () => attempt(context, () => m.dismissNotice(n)), child: const Text('결제 아님')),
                       TextButton(onPressed: () => sheet<void>(context, TxnForm(notice: n)), child: const Text('고쳐서 기록')),
                     ]),
@@ -299,7 +301,7 @@ class _FixedFormState extends State<FixedForm> {
           TextFormField(controller: name, maxLength: 30, decoration: const InputDecoration(labelText: '이름', counterText: ''), validator: (s) => (s ?? '').trim().isEmpty ? '이름을 적어 주세요' : null),
           const SizedBox(height: 12),
           MoneyField(amount, '금액'),
-          DropdownButtonFormField<int>(
+          DropdownButtonFormField<int>(isExpanded: true, 
               initialValue: day, decoration: const InputDecoration(labelText: '결제일'),
               items: [for (var d = 1; d <= 31; d++) DropdownMenuItem(value: d, child: Text('매달 $d일'))], onChanged: (v) => day = v ?? 1),
           SwitchListTile(contentPadding: EdgeInsets.zero, value: remind, onChanged: (v) => setState(() => remind = v), title: const Text('하루 전 알림')),

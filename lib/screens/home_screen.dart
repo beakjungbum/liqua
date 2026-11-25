@@ -40,10 +40,7 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 8),
             Bar(m.percent / 100),
             const SizedBox(height: 8),
-            Row(children: [
-              Expanded(child: Text('목표 ${won(m.target)}', style: const TextStyle(color: AppColors.sub, fontSize: 13))),
-              Text(m.total >= m.target ? '달성했어요' : '${won(m.target - m.total)} 남음', style: const TextStyle(color: AppColors.sub, fontSize: 13)),
-            ]),
+            Between(Text('목표 ${won(m.target)}', style: const TextStyle(color: AppColors.sub, fontSize: 13)), Text(m.total >= m.target ? '달성했어요' : '${won(m.target - m.total)} 남음', textAlign: TextAlign.end, style: const TextStyle(color: AppColors.sub, fontSize: 13))),
           ])),
       if (m.pending.isNotEmpty)
         SoftCard(
@@ -114,22 +111,19 @@ class TodayCard extends StatelessWidget {
         color: m.over ? const Color(0xFF8F4322) : AppColors.olive,
         onTap: onTap,
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Expanded(child: Text(m.over ? '오늘 초과한 돈' : '오늘 쓸 수 있는 돈', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700))),
-            if (m.todayCarry != 0)
-              Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(20)),
-                  child: Text('이월 ${m.todayCarry > 0 ? '+' : ''}${won(m.todayCarry)}', style: const TextStyle(color: Colors.white, fontSize: 12))),
-          ]),
+          Between(
+              Text(m.over ? '오늘 초과한 돈' : '오늘 쓸 수 있는 돈', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+              m.todayCarry == 0
+                  ? const SizedBox.shrink()
+                  : Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(20)),
+                      child: Text('이월 ${m.todayCarry > 0 ? '+' : ''}${won(m.todayCarry)}', style: const TextStyle(color: Colors.white, fontSize: 12)))),
           Won(left.abs(), size: 42, color: Colors.white),
           const SizedBox(height: 8),
           Bar(m.todayBudget <= 0 ? 1 : m.todaySpent / m.todayBudget, color: m.over ? const Color(0xFFFFB38A) : const Color(0xFFD9E0B8), track: Colors.black26),
           const SizedBox(height: 8),
-          Row(children: [
-            Expanded(child: Text('${won(m.todayBudget)} 중 ${won(m.todaySpent)} 사용', style: const TextStyle(color: soft, fontSize: 13))),
-            Text(m.over ? '내일 ${won(m.tomorrowBudget)}' : '${m.daysLeft}일 남음', style: const TextStyle(color: soft, fontSize: 13)),
-          ]),
+          Between(Text('${won(m.todayBudget)} 중 ${won(m.todaySpent)} 사용', style: const TextStyle(color: soft, fontSize: 13)), Text(m.over ? m.tomorrowBudget > 0 ? '내일 ${won(m.tomorrowBudget)}' : '내일 쓸 돈 없음' : '${m.daysLeft}일 남음', textAlign: TextAlign.end, style: const TextStyle(color: soft, fontSize: 13))),
         ]));
   }
 }
@@ -198,7 +192,7 @@ class _InsightScreenState extends State<InsightScreen> {
               Padding(
                   padding: const EdgeInsets.symmetric(vertical: 7),
                   child: Column(children: [
-                    Row(children: [Expanded(child: Text(c.$1.label)), Text('${won(c.$2)}  ${shares[i]}%', style: const TextStyle(fontWeight: FontWeight.w600))]),
+                    Between(Text(c.$1.label), Text('${won(c.$2)}  ${shares[i]}%', style: const TextStyle(fontWeight: FontWeight.w600))),
                     const SizedBox(height: 5),
                     Bar(shares[i] / 100, height: 7),
                   ])),

@@ -76,12 +76,10 @@ class _AssetScreenState extends State<AssetScreen> {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               const Text('자산 구성 비율', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               const SizedBox(height: 14),
-              SizedBox(
-                  height: 150,
-                  child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
                     for (final (i, k) in keys.indexed)
                       Expanded(
-                          child: Column(mainAxisAlignment: MainAxisAlignment.end, children: [
+                          child: Column(mainAxisSize: MainAxisSize.min, children: [
                         Text('${shares[i]}%', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
                         const SizedBox(height: 4),
                         Container(width: 34, height: 8 + 84.0 * shares[i] / (shares.first == 0 ? 1 : shares.first), decoration: BoxDecoration(color: AppColors.chart[i], borderRadius: const BorderRadius.vertical(top: Radius.circular(7)))),
@@ -89,7 +87,7 @@ class _AssetScreenState extends State<AssetScreen> {
                         Padding(padding: const EdgeInsets.only(top: 4), child: Text(Asset.categoryLabels[k] ?? k, maxLines: 1, style: const TextStyle(fontSize: 12))),
                         FittedBox(child: Text(won(groups[k]!), style: const TextStyle(fontSize: 11, color: AppColors.sub))),
                       ])),
-                  ])),
+                  ]),
             ])),
           if (fxSum > 0)
             SoftCard(
@@ -213,7 +211,7 @@ class _AssetFormState extends State<AssetForm> {
           if (isFx)
             Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: DropdownButtonFormField<Currency>(
+                child: DropdownButtonFormField<Currency>(isExpanded: true, 
                     initialValue: currency, decoration: const InputDecoration(labelText: '통화'),
                     items: [for (final c in Currency.values) DropdownMenuItem(value: c, child: Text('${c.label} (${c.code})'))],
                     onChanged: (v) => setState(() => currency = v ?? currency)))

@@ -21,6 +21,13 @@ class SettingsScreen extends StatelessWidget {
           item(Icons.account_balance_wallet_outlined, '생활비 설정', '하루 기본 ${won(m.plan?.base(m.today) ?? 0)}', () => push(context, const PlanScreen())),
           item(Icons.event_repeat_outlined, '고정지출', '${m.fixed.length}개', () => push(context, const FixedScreen())),
           item(Icons.chat_outlined, '인터뷰 다시 하기', '만 ${p.age}세 · ${p.region} · 위험 ${p.risk}', () => push(context, const InterviewScreen())),
+          if (m.demo)
+            item(Icons.play_circle_outline, '결제 알림 시연', '4,500원 결제 알림이 온 것처럼 기록해요', () async {
+              final t = m.now;
+              final two = [t.month, t.day, t.hour, t.minute].map((v) => '$v'.padLeft(2, '0')).toList();
+              await m.handleNotice('[KB국민카드] 4,500원 승인 스타벅스 ${two[0]}/${two[1]} ${two[2]}:${two[3]}', app: '문자', at: t);
+              if (context.mounted) toast(context, '스타벅스 4,500원을 기록했어요. 오늘 남은 돈 ${won(m.todayLeft)}');
+            }),
           const SizedBox(height: 20),
           FilledButton(
               onPressed: () {
