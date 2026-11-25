@@ -15,16 +15,21 @@ Future<void> main() async {
     if (Firebase.apps.isEmpty) {
       await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
     }
+  } catch (e) {
+    // 초기화에 실패해도 둘러보기는 쓸 수 있다.
+    debugPrint('Firebase 초기화 실패: $e');
+  }
+  // App Check 가 실패해도 로그인과 저장은 이어 간다.
+  try {
     await FirebaseAppCheck.instance.activate(
       providerAndroid: kDebugMode ? AndroidDebugProvider() : AndroidPlayIntegrityProvider(),
       providerApple: kDebugMode ? AppleDebugProvider() : AppleDeviceCheckProvider(),
       providerWeb: kDebugMode ? WebDebugProvider() : null,
     );
-    AuthService.instance.listenToAuthState();
   } catch (e) {
-    // 초기화에 실패해도 둘러보기는 쓸 수 있다.
-    debugPrint('Firebase 초기화 실패: $e');
+    debugPrint('App Check 초기화 실패: $e');
   }
+  if (Firebase.apps.isNotEmpty) AuthService.instance.listenToAuthState();
   try {
     await DeviceService.instance.init();
   } catch (e) {
