@@ -38,7 +38,7 @@ class _AssetScreenState extends State<AssetScreen> {
       final r = q.rates[currencyOf(a)?.code];
       if (r != null && (r - a.currentPrice).abs() > .0001) {
         try {
-          await m.saveAsset(Asset(id: a.id, name: a.name, category: a.category, quantity: a.quantity, purchasePrice: a.purchasePrice, currentPrice: r, memo: a.memo));
+          await m.updatePrice(a.id, r);
         } catch (_) {}
       }
     }
@@ -225,6 +225,10 @@ class _AssetFormState extends State<AssetForm> {
           if (isFx && rate != null) Padding(padding: const EdgeInsets.only(bottom: 12), child: Text('지금 환율 1${currency.code} = ${rate.toStringAsFixed(2)}원 (${widget.fx!.source})', style: const TextStyle(color: AppColors.sub))),
           SaveButton('저장', () async {
             if (!form.currentState!.validate()) return;
+            if (!simple && d(qty) * (isFx && rate != null ? rate : d(cur)) > 1e13) {
+              toast(context, '평가액이 너무 커요. 수량과 단가를 확인해 주세요.');
+              return;
+            }
             final v = simple ? parseWon(amount.text)!.toDouble() : 0.0;
             final ok = await attempt(context, () => m.saveAsset(Asset(
                 id: widget.edit?.id ?? '',
@@ -232,7 +236,8 @@ class _AssetFormState extends State<AssetForm> {
                 category: category,
                 quantity: simple ? 1 : d(qty),
                 purchasePrice: simple ? v : d(buy),
-                currentPrice: simple ? v : isFx && rate != null ? rate : d(cur))));
+                currentPrice: simple ? v : isFx && rate != null ? rate : d(cur),
+                memo: widget.edit?.memo)));
             if (ok && context.mounted) Navigator.pop(context);
           }),
           if (widget.edit != null)

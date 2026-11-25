@@ -98,6 +98,18 @@ void main() {
     expect(find.text('오늘 생활비를 5,000원 넘었어요'), findsOneWidget);
   });
 
+  testWidgets('생활비 설정을 그대로 저장해도 오늘 금액이 바뀌지 않는다', (t) async {
+    final m = await open(t, () => Shell(onExit: () {}), w: 400, h: 900);
+    final before = (m.todayLeft, m.settings!.start);
+    final c = t.element(find.byType(Shell));
+    push(c, const PlanScreen());
+    await t.pumpAndSettle();
+    await t.ensureVisible(find.text('저장'));
+    await t.tap(find.text('저장'));
+    await t.pumpAndSettle();
+    expect((m.todayLeft, m.settings!.start), before);
+  });
+
   testWidgets('빈 금액은 저장되지 않고 이유를 보인다', (t) async {
     final m = await open(t, () => Shell(onExit: () {}, initial: 1), w: 400, h: 900);
     final n = m.txns.length;

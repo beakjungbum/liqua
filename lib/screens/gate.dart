@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +9,7 @@ import 'package:mm_app/data/store.dart';
 import 'package:mm_app/screens/onboarding.dart';
 import 'package:mm_app/screens/shell.dart';
 import 'package:mm_app/services/auth_service.dart';
+import 'package:mm_app/services/device_service.dart';
 import 'package:mm_app/theme/app_theme.dart';
 import 'package:mm_app/ui/widgets.dart';
 
@@ -49,10 +52,21 @@ class _GateState extends State<Gate> {
           if (s.connectionState == ConnectionState.waiting) return const _Splash();
           final user = s.data;
           if (user == null) {
-            if (uid != null) use(null, null);
+            if (uid != null) {
+              use(null, null);
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
+              });
+              DeviceService.instance.clearAccount();
+            }
             return LoginScreen(onDemo: demo);
           }
-          if (uid != user.uid) use(AppModel(FirestoreStore(user.uid)), user.uid);
+          if (uid != user.uid) {
+            final store = FirestoreStore(user.uid);
+            final next = AppModel(store);
+            store.onLateError = next.reportError;
+            use(next, user.uid);
+          }
           return Session(key: ValueKey(user.uid), model: model!, onExit: () => AuthService.instance.signOut());
         });
   }
@@ -85,9 +99,44 @@ class Session extends StatelessWidget {
       child: Builder(builder: (c) {
         final m = AppScope.of(c);
         if (m.error != null && !m.ready) return _LoadError(error: m.error!, onExit: onExit);
-        if (!m.ready) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        if (!m.ready) return _Loading(onExit: onExit);
         return m.onboarded ? Shell(onExit: onExit) : Onboarding(onExit: onExit);
       }));
+}
+
+class _Loading extends StatefulWidget {
+  const _Loading({required this.onExit});
+  final VoidCallback onExit;
+  @override
+  State<_Loading> createState() => _LoadingState();
+}
+
+class _LoadingState extends State<_Loading> {
+  var slow = false;
+  late final Timer _t = Timer(const Duration(seconds: 8), () => setState(() => slow = true));
+  @override
+  void initState() {
+    super.initState();
+    _t;
+  }
+
+  @override
+  void dispose() {
+    _t.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+      body: Center(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const CircularProgressIndicator(),
+        if (slow) ...[
+          const SizedBox(height: 16),
+          const Text('처음 불러올 때는 인터넷 연결이 필요해요'),
+          TextButton(onPressed: widget.onExit, child: const Text('나가기')),
+        ],
+      ])));
 }
 
 class _LoadError extends StatelessWidget {

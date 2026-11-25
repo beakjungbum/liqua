@@ -35,7 +35,7 @@ class HomeScreen extends StatelessWidget {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
               const Expanded(child: Text('목표 달성률', style: TextStyle(fontWeight: FontWeight.w700))),
-              Text('${m.percent.clamp(0, 999).toStringAsFixed(m.percent < 10 ? 1 : 0)}%', style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: AppColors.deep)),
+              Text('${percentText(m.percent)}%', style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: AppColors.deep)),
             ]),
             const SizedBox(height: 8),
             Bar(m.percent / 100),

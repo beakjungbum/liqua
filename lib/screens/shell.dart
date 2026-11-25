@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:mm_app/data/app_model.dart';
+import 'package:mm_app/data/store.dart';
 import 'package:mm_app/screens/asset_screen.dart';
 import 'package:mm_app/screens/book_screen.dart';
 import 'package:mm_app/screens/goal_screen.dart';
@@ -25,7 +26,7 @@ class _ShellState extends State<Shell> with WidgetsBindingObserver {
   late var index = widget.initial;
   late final AppModel m;
   StreamSubscription<AppAlert>? sub;
-  var fixedKey = '';
+  String? fixedKey;
 
   @override
   void initState() {
@@ -36,7 +37,10 @@ class _ShellState extends State<Shell> with WidgetsBindingObserver {
     m.addListener(reschedule);
     final d = DeviceService.instance;
     // 둘러보기에서는 실제 알림을 읽지 않는다.
-    if (!m.demo || captureInDemo) d.onArrived(() => d.drain(m));
+    if (!m.demo || captureInDemo) {
+      d.setOwner(m.demo ? 'demo' : uidOf(m));
+      d.onArrived(() => d.drain(m));
+    }
     start();
   }
 
@@ -52,11 +56,13 @@ class _ShellState extends State<Shell> with WidgetsBindingObserver {
 
   void reschedule() {
     if (m.demo) return;
-    final key = [for (final f in m.fixed) '${f.id}${f.name}${f.amount}${f.day}${f.remind}'].join('|');
+    final key = [m.today.toString(), for (final f in m.fixed) '${f.id}${f.name}${f.amount}${f.day}${f.remind}'].join('|');
     if (key == fixedKey) return;
     fixedKey = key;
     DeviceService.instance.schedule(m.fixed).catchError((Object e) => debugPrint('예약 실패: $e'));
   }
+
+  String uidOf(AppModel m) => m.store is FirestoreStore ? (m.store as FirestoreStore).uid : 'demo';
 
   void onAlert(AppAlert a) {
     if (!m.demo || captureInDemo) DeviceService.instance.alert(a).catchError((Object e) => debugPrint('알림 실패: $e'));
@@ -86,6 +92,7 @@ class _ShellState extends State<Shell> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     sub?.cancel();
+    DeviceService.instance.onArrived(null);
     m.removeListener(reschedule);
     super.dispose();
   }

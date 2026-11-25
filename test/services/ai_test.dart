@@ -26,7 +26,7 @@ void main() {
   });
   test('같은 질문은 한 번만 부른다', () async {
     var calls = 0;
-    final s = AiService(generate: (_) async { calls++; return '{"answer":"3만원 남았어요","ids":[]}'; });
+    final s = AiService(generate: (_) async { calls++; return '{"answer":"아직 남았어요","ids":[]}'; });
     await s.ask('오늘 생활비 얼마 남았어', m);
     await s.ask('오늘 생활비 얼마 남았어', m);
     expect(calls, 1);

@@ -60,7 +60,7 @@ class AiService {
       ].join(', ');
 
   static bool asksMine(String q) =>
-      RegExp(r'(내|나의|제|이번\s*달|오늘).*(자산|목표|지출|소비|생활비|식비|카페|돈)|얼마나?\s*(남|썼|모)|달성률').hasMatch(q);
+      RegExp(r'(?<![가-힣])(내|나의|제|이번\s*달|오늘)\s.*(자산|목표|지출|소비|생활비|식비|카페|돈)|얼마나?\s*(남|썼|모)|달성률').hasMatch(q);
 
   Future<AiAnswer> ask(String question, AppModel m) async {
     final q = question.trim();
@@ -74,7 +74,7 @@ class AiService {
     final prompt = '[자료]\n${[for (final d in docs) 'id=${d.id} 제목=${d.title} 기관=${d.source} 기준=${d.asOf ?? d.checkedAt}\n${d.body} ${d.howTo ?? ''}'].join('\n\n')}'
         '\n\n[앱이 계산한 수치]\n$nums\n\n[질문]\n$q';
     try {
-      final a = parse(await _generate(prompt), docs, mine: mine);
+      final a = parse(await _generate(prompt), docs, mine: mine, given: prompt);
       if (a != null) return _cache[key] = a;
       return const AiAnswer(noEvidence, [], notice: 'AI 답이 근거 규칙을 지키지 않아 보여 주지 않았어요.');
     } catch (e) {
@@ -83,7 +83,7 @@ class AiService {
   }
 
   /// 근거 없는 답, 매매 권유, 지어낸 출처는 버린다.
-  static AiAnswer? parse(String raw, List<Knowledge> docs, {required bool mine}) {
+  static AiAnswer? parse(String raw, List<Knowledge> docs, {required bool mine, String given = ''}) {
     try {
       final s = raw.substring(raw.indexOf('{'), raw.lastIndexOf('}') + 1);
       final j = jsonDecode(s) as Map<String, dynamic>;
@@ -93,10 +93,20 @@ class AiService {
       final ids = {for (final i in j['ids'] as List) '$i'};
       final used = [for (final d in docs) if (ids.contains(d.id)) d];
       if (used.isEmpty && !mine) return null;
+      if (given.isNotEmpty && !numbersGiven(text, given)) return null;
       return AiAnswer(text, used, byModel: true);
     } catch (_) {
       return null;
     }
+  }
+
+  /// 답에 나온 금액과 비율이 모두 넘겨준 글에 있는가. "3만원" 과 "30,000원" 은 같다.
+  static bool numbersGiven(String text, String given) {
+    Set<num> read(String s) => {
+          for (final m in RegExp(r'(\d[\d,]*(?:\.\d+)?(?:억|만)?(?:\s?\d[\d,]*만?)?)\s*원').allMatches(s)) parseWon(m[1]!) ?? -1,
+          for (final m in RegExp(r'(\d+(?:\.\d+)?)\s*%').allMatches(s)) double.parse(m[1]!) + .5e-6,
+        };
+    return read(text).difference(read(given)).isEmpty;
   }
 
   static AiAnswer fallback(List<Knowledge> docs, String? nums, String why) => AiAnswer(
@@ -106,8 +116,8 @@ class AiService {
 
   Future<String?> explain(List<Advice> a) async {
     try {
-      final r = await _generate('[앱이 계산한 수치]\n${[for (final x in a) '${x.title}: ${x.evidence}'].join('\n')}\n\n[질문]\n위 세 가지를 이어서 오늘부터 할 수 있는 행동으로 설명해 줘. ids 는 빈 목록.');
-      return parse(r, const [], mine: true)?.text;
+      final prompt = '[앱이 계산한 수치]\n${[for (final x in a) '${x.title}: ${x.evidence}'].join('\n')}\n\n[질문]\n위 세 가지를 이어서 오늘부터 할 수 있는 행동으로 설명해 줘. ids 는 빈 목록.';
+      return parse(await _generate(prompt), const [], mine: true, given: prompt)?.text;
     } catch (_) {
       return null;
     }

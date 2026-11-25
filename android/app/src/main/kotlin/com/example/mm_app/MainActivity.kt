@@ -10,7 +10,7 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        channel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "liqua/notices").apply {
+        mine = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "liqua/notices").apply {
             setMethodCallHandler { call, result ->
                 when (call.method) {
                     "enabled" -> result.success(
@@ -21,17 +21,25 @@ class MainActivity : FlutterActivity() {
                     }
                     "peek" -> result.success(NoticeQueue.peek(this@MainActivity))
                     "ack" -> {
-                        NoticeQueue.ack(this@MainActivity, call.arguments as Int)
+                        @Suppress("UNCHECKED_CAST")
+                        NoticeQueue.ack(this@MainActivity, call.arguments as List<String>)
+                        result.success(null)
+                    }
+                    "setOwner" -> {
+                        NoticeQueue.setOwner(this@MainActivity, call.arguments as String?)
                         result.success(null)
                     }
                     else -> result.notImplemented()
                 }
             }
         }
+        channel = mine
     }
 
+    private var mine: MethodChannel? = null
+
     override fun onDestroy() {
-        channel = null
+        if (channel === mine) channel = null
         super.onDestroy()
     }
 

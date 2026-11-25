@@ -28,6 +28,9 @@ Future<T?> sheet<T>(BuildContext c, Widget child) {
           padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + MediaQuery.viewInsetsOf(x).bottom), child: SingleChildScrollView(child: child))));
 }
 
+/// 99.6% 를 100% 로 올려 보이지 않는다.
+String percentText(double p) => p < 10 ? '${(p * 10).floor() / 10}' : '${p.clamp(0, 999).floor()}';
+
 void toast(BuildContext c, String s) => ScaffoldMessenger.of(c)
   ..hideCurrentSnackBar()
   ..showSnackBar(SnackBar(content: Text(s)));

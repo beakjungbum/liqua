@@ -18,7 +18,11 @@ class Txn {
     required this.at,
     this.source = '직접 입력',
     this.confirmed = true,
+    this.cancelledAt,
   });
+
+  /// 취소된 결제는 합계에서 빼지만 중복 취소를 알아보려고 남긴다.
+  final DateTime? cancelledAt;
   final String id;
   final TxnKind kind;
   final int amount;
@@ -41,6 +45,7 @@ class Txn {
         at: _date(j['at']),
         source: j['source'] as String? ?? '직접 입력',
         confirmed: j['confirmed'] as bool? ?? true,
+        cancelledAt: j['cancelledAt'] is DateTime ? j['cancelledAt'] as DateTime : null,
       );
 
   Json toJson() => {
@@ -51,11 +56,12 @@ class Txn {
         'at': at,
         'source': source,
         'confirmed': confirmed,
+        if (cancelledAt != null) 'cancelledAt': cancelledAt,
       };
 
-  Txn copyWith({int? amount, String? merchant, Category? category, DateTime? at, bool? confirmed}) => Txn(
+  Txn copyWith({int? amount, String? merchant, Category? category, DateTime? at, bool? confirmed, DateTime? cancelledAt}) => Txn(
       id: id, kind: kind, amount: amount ?? this.amount, merchant: merchant ?? this.merchant,
-      category: category ?? this.category, at: at ?? this.at, source: source, confirmed: confirmed ?? this.confirmed);
+      category: category ?? this.category, at: at ?? this.at, source: source, confirmed: confirmed ?? this.confirmed, cancelledAt: cancelledAt ?? this.cancelledAt);
 
   ParsedNotice get asNotice => ParsedNotice(amount: amount, merchant: merchant, at: at, cancelled: false);
 }
@@ -85,8 +91,11 @@ class FixedExpense {
 
 /// 생활비 설정. 수입일이 지나면 다음 기간으로 저절로 넘어간다.
 class PlanSettings {
-  const PlanSettings({required this.living, required this.saving, required this.start, this.payday});
+  const PlanSettings({required this.living, required this.saving, required this.start, this.payday, this.firstLiving});
   final int living, saving;
+
+  /// 시작한 날부터 첫 수입일까지 쓸 금액. 없으면 [living] 과 같다.
+  final int? firstLiving;
   final DateTime start;
 
   /// 매달 수입일. 없으면 30일 단위.
@@ -96,8 +105,9 @@ class PlanSettings {
       ? null
       : PlanSettings(
           living: _int(j['living']), saving: _int(j['saving']), start: _date(j['start']),
-          payday: j['payday'] is num ? _int(j['payday']).clamp(1, 31) : null);
-  Json toJson() => {'living': living, 'saving': saving, 'start': start, 'payday': payday};
+          payday: j['payday'] is num ? _int(j['payday']).clamp(1, 31) : null,
+          firstLiving: j['firstLiving'] is num ? _int(j['firstLiving']) : null);
+  Json toJson() => {'living': living, 'saving': saving, 'start': start, 'payday': payday, 'firstLiving': firstLiving};
 
   BudgetPlan planFor(DateTime today, List<FixedExpense> fixed) {
     DateTime endOf(DateTime s) => payday == null ? DateTime(s.year, s.month, s.day + 30) : nextPayday(s, payday!);
@@ -107,8 +117,13 @@ class PlanSettings {
       s = e;
       e = endOf(s);
     }
-    final due = fixed.where((f) => f.nextDue(s).isBefore(e)).fold(0, (a, f) => a + f.amount);
-    return BudgetPlan(living: living, fixed: due, saving: saving, start: s, days: daysBetween(s, e));
+    var due = 0;
+    for (final f in fixed) {
+      for (var d = f.nextDue(s); d.isBefore(e); d = f.nextDue(DateTime(d.year, d.month, d.day + 1))) {
+        due += f.amount;
+      }
+    }
+    return BudgetPlan(living: s == dateOnly(start) ? firstLiving ?? living : living, fixed: due, saving: saving, start: s, days: daysBetween(s, e));
   }
 }
 

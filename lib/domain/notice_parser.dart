@@ -7,26 +7,33 @@ enum Category {
 }
 
 class ParsedNotice {
-  const ParsedNotice({required this.amount, required this.merchant, required this.at, required this.cancelled});
+  const ParsedNotice({required this.amount, required this.merchant, required this.at, required this.cancelled, this.timed = true});
   final int amount;
   final String merchant;
   final DateTime at;
   final bool cancelled;
+
+  /// 알림 문구에 시각이 있었는가. 없으면 [at] 은 받은 시각이다.
+  final bool timed;
 }
 
 final _amount = RegExp(r'(?<![\d,])(\d{1,3}(?:,\d{3})+|\d+)\s*원');
 final _cumulative = RegExp(r'(?:총\s*)?(?:누적|잔액|한도|사용가능)[^\d\n]*[\d,]+\s*원?');
 final _date = RegExp(r'(?<!\d)(\d{1,2})[/.](\d{1,2})\s+(\d{1,2}):(\d{2})');
-final _pay = RegExp(r'승인|결제');
-final _ignore = RegExp(r'\(광고\)|거절|실패|입금|결제\s*예정|결제일|인증번호');
+final _issuer = RegExp(r'Web발신|카드|페이|뱅크|은행|토스');
+final _ignore = RegExp(r'\(광고\)|거절|실패|입금|예정|결제일|인증번호|요청|하면|하세요|해야|했어(?!요)|했니|할까|특가|쿠폰|이벤트');
+final _refund = RegExp(r'환불|부분\s*취소');
 final _cancel = RegExp(r'취소');
 
 /// 결제 알림으로 보이는가. 읽지 못했을 때 「확인 필요」 로 남길지 정한다.
-bool looksLikePayment(String raw) => !_ignore.hasMatch(raw) && _pay.hasMatch(raw) && _amount.hasMatch(raw);
+bool looksLikePayment(String raw) => 
+    !_ignore.hasMatch(raw) &&
+    _amount.hasMatch(raw) &&
+    (raw.contains('승인') || (raw.contains('결제') && _issuer.hasMatch(raw)));
 
 /// 금액과 가맹점을 모두 확신할 때만 값을 낸다. 아니면 null.
 ParsedNotice? parseNotice(String raw, DateTime receivedAt) {
-  if (!looksLikePayment(raw)) return null;
+  if (!looksLikePayment(raw) || _refund.hasMatch(raw)) return null;
   final text = raw.replaceAll(_cumulative, ' ');
   final am = _amount.firstMatch(text);
   if (am == null) return null;
@@ -35,7 +42,8 @@ ParsedNotice? parseNotice(String raw, DateTime receivedAt) {
   final merchant = _merchant(text, am);
   if (merchant == null) return null;
   return ParsedNotice(
-      amount: amount, merchant: merchant, at: _when(text, receivedAt), cancelled: _cancel.hasMatch(raw));
+      amount: amount, merchant: merchant, at: _when(text, receivedAt), cancelled: _cancel.hasMatch(raw),
+      timed: _date.hasMatch(text));
 }
 
 DateTime _when(String text, DateTime received) {
@@ -90,11 +98,19 @@ Category categorize(String merchant) {
   return Category.etc;
 }
 
+bool sameMerchant(String a, String b) {
+  final x = a.replaceAll(' ', ''), y = b.replaceAll(' ', '');
+  return x.contains(y) || y.contains(x);
+}
+
 /// 같은 결제가 문자와 카카오톡으로 두 번 온 것인가.
 /// 같은 앱에서 온 것은 시각과 가맹점까지 같을 때만 재전송으로 본다.
 bool isDuplicate(ParsedNotice a, String sourceA, ParsedNotice b, String sourceB) {
   if (a.amount != b.amount || a.cancelled != b.cancelled) return false;
-  final x = a.merchant.replaceAll(' ', ''), y = b.merchant.replaceAll(' ', '');
-  if (sourceA == sourceB) return x == y && a.at == b.at;
-  return (x.contains(y) || y.contains(x)) && a.at.difference(b.at).abs() <= const Duration(minutes: 3);
+  if (sourceA == sourceB) {
+    if (a.merchant != b.merchant) return false;
+    // 시각 없는 알림은 앱이 같은 알림을 다시 띄울 수 있어 1분까지 같은 것으로 본다.
+    return b.timed ? a.at == b.at : a.at.difference(b.at).abs() <= const Duration(minutes: 1);
+  }
+  return sameMerchant(a.merchant, b.merchant) && a.at.difference(b.at).abs() <= const Duration(minutes: 3);
 }

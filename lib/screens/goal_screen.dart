@@ -31,7 +31,7 @@ class _GoalScreenState extends State<GoalScreen> {
         const SizedBox(height: 10),
         Row(children: [
           Expanded(child: Text('모은 금액 ${won(m.total)}', style: const TextStyle(fontWeight: FontWeight.w700))),
-          Text('${m.percent.toStringAsFixed(m.percent < 10 ? 1 : 0)}%', style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.olive)),
+          Text('${percentText(m.percent)}%', style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.olive)),
         ]),
       ])),
       FilledButton(onPressed: () => sheet<void>(context, const _TargetForm()), child: const Text('목표 수정하기')),

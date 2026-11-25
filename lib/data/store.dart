@@ -6,13 +6,31 @@ import 'models.dart';
 
 typedef Doc = (String id, Json data);
 
+/// 서버 값에 더한다. 두 기기에서 동시에 저장해도 한쪽이 사라지지 않는다.
+class Inc {
+  const Inc(this.by);
+  final num by;
+}
+
+class Op {
+  const Op.set(this.collection, this.id, this.data) : merge = false;
+  const Op.merge(this.collection, this.id, this.data) : merge = true;
+  const Op.remove(this.collection, this.id) : data = null, merge = false;
+  const Op.user(this.data) : collection = null, id = null, merge = true;
+  final String? collection, id;
+  final Json? data;
+  final bool merge;
+}
+
 /// 저장소. 로그인하면 Firestore, 둘러보기는 메모리를 쓴다.
 abstract class Store {
   Stream<List<Doc>> watch(String collection);
   Stream<Json> watchUser();
-  Future<void> set(String collection, String id, Json data);
-  Future<void> remove(String collection, String id);
-  Future<void> mergeUser(Json data);
+  /// 한 번에 모두 저장하거나 하나도 저장하지 않는다.
+  Future<void> commit(List<Op> ops);
+  Future<void> set(String collection, String id, Json data) => commit([Op.set(collection, id, data)]);
+  Future<void> remove(String collection, String id) => commit([Op.remove(collection, id)]);
+  Future<void> mergeUser(Json data) => commit([Op.user(data)]);
   String newId();
 }
 
@@ -23,38 +41,56 @@ Object? _fromFire(Object? v) => switch (v) {
       _ => v,
     };
 
-class FirestoreStore implements Store {
-  FirestoreStore(this.uid, [FirebaseFirestore? db]) : _db = db ?? FirebaseFirestore.instance;
+class FirestoreStore extends Store {
+  FirestoreStore(this.uid, {FirebaseFirestore? db, this.onLateError}) : _db = db ?? FirebaseFirestore.instance;
   final String uid;
   final FirebaseFirestore _db;
+
+  /// 오프라인에서 저장한 뒤 서버가 거절했을 때.
+  void Function(Object error)? onLateError;
   DocumentReference<Json> get _user => _db.collection('users').doc(uid);
 
   @override
-  Stream<List<Doc>> watch(String c) => _user.collection(c).snapshots(includeMetadataChanges: false).map(
-      (s) => [for (final d in s.docs) (d.id, _fromFire(d.data())! as Json)]);
+  Stream<List<Doc>> watch(String c) =>
+      _user.collection(c).snapshots().map((s) => [for (final d in s.docs) (d.id, _fromFire(d.data())! as Json)]);
+
+  /// 새 기기에서 오프라인이면 캐시가 비어 있다. 이를 새 사용자로 오해해 덮어쓰지 않도록
+  /// 서버가 확인해 줄 때까지 기다린다.
+  @override
+  Stream<Json> watchUser() => _user
+      .snapshots(includeMetadataChanges: true)
+      .where((d) => !(d.metadata.isFromCache && d.data()?['createdAt'] == null))
+      .map((d) => (_fromFire(d.data() ?? <String, dynamic>{})! as Map).cast<String, dynamic>());
+
+  static Json _toFire(Json d) => {for (final e in d.entries) e.key: e.value is Inc ? FieldValue.increment((e.value as Inc).by) : e.value};
 
   @override
-  Stream<Json> watchUser() => _user.snapshots().map((d) => (_fromFire(d.data() ?? <String, dynamic>{})! as Map).cast<String, dynamic>());
-
-  /// 오프라인이면 서버 확인이 오지 않는다. 기기에는 이미 저장됐으므로 오래 기다리지 않는다.
-  /// 권한 오류는 보통 이 시간 안에 돌아온다.
-  Future<void> _ack(Future<void> f) => f.timeout(const Duration(seconds: 3), onTimeout: () {});
-
-  @override
-  Future<void> set(String c, String id, Json data) => _ack(_user.collection(c).doc(id).set(data));
-
-  @override
-  Future<void> remove(String c, String id) => _ack(_user.collection(c).doc(id).delete());
-
-  @override
-  Future<void> mergeUser(Json data) =>
-      _ack(_user.set({...data, 'updatedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true)));
+  Future<void> commit(List<Op> ops) async {
+    final b = _db.batch();
+    for (final o in ops) {
+      final ref = o.collection == null ? _user : _user.collection(o.collection!).doc(o.id);
+      if (o.data == null) {
+        b.delete(ref);
+        continue;
+      }
+      final d = _toFire(o.data!);
+      if (o.collection == null) d['updatedAt'] = FieldValue.serverTimestamp();
+      b.set(ref, d, o.merge ? SetOptions(merge: true) : null);
+    }
+    // 오프라인이면 서버 확인이 오지 않는다. 기기에는 이미 저장됐으므로 오래 기다리지 않는다.
+    var late = false;
+    final f = b.commit().catchError((Object e) {
+      if (!late) throw e;
+      onLateError?.call(e);
+    });
+    await f.timeout(const Duration(seconds: 3), onTimeout: () => late = true);
+  }
 
   @override
   String newId() => _db.collection('_').doc().id;
 }
 
-class MemoryStore implements Store {
+class MemoryStore extends Store {
   final _docs = <String, Map<String, Json>>{};
   final _user = <String, dynamic>{};
   final _ch = StreamController<String>.broadcast(sync: true);
@@ -75,21 +111,20 @@ class MemoryStore implements Store {
   }
 
   @override
-  Future<void> set(String c, String id, Json data) async {
-    (_docs[c] ??= {})[id] = {...data};
-    _ch.add(c);
-  }
-
-  @override
-  Future<void> remove(String c, String id) async {
-    _docs[c]?.remove(id);
-    _ch.add(c);
-  }
-
-  @override
-  Future<void> mergeUser(Json data) async {
-    _user.addAll(data);
-    _ch.add('#user');
+  Future<void> commit(List<Op> ops) async {
+    final touched = <String>{};
+    for (final o in ops) {
+      final c = o.collection;
+      touched.add(c ?? '#user');
+      if (o.data == null) {
+        _docs[c]?.remove(o.id);
+        continue;
+      }
+      final target = c == null ? _user : (_docs[c] ??= {})[o.id!] ??= {};
+      if (!o.merge) target.clear();
+      o.data!.forEach((k, v) => target[k] = v is Inc ? ((target[k] as num?) ?? 0) + v.by : v);
+    }
+    touched.forEach(_ch.add);
   }
 
   @override

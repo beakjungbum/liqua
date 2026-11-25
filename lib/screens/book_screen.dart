@@ -198,7 +198,7 @@ class _TxnFormState extends State<TxnForm> {
             ]),
             const SizedBox(height: 12),
           ],
-          MoneyField(amount, '금액'),
+          if (e?.kind == TxnKind.saving) Text('저축 ${won(e!.amount)}. 지우면 저축 자산에서도 빠져요.') else MoneyField(amount, '금액'),
           TextFormField(
               controller: merchant,
               maxLength: 40,
@@ -219,7 +219,7 @@ class _TxnFormState extends State<TxnForm> {
           const SizedBox(height: 18),
           SaveButton('저장', () async {
             if (!form.currentState!.validate()) return;
-            final v = parseWon(amount.text)!, name = merchant.text.trim();
+            final v = e?.kind == TxnKind.saving ? e!.amount : parseWon(amount.text)!, name = merchant.text.trim();
             final ok = await attempt(context, () async {
               if (e != null) {
                 await m.updateTxn(e.copyWith(amount: v, merchant: name, category: category, confirmed: true));

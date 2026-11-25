@@ -29,7 +29,11 @@ class AppModel extends ChangeNotifier {
           _loaded.add(c);
           _changed();
         }, onError: _fail));
-    listen('transactions', (d) => txns = [for (final (id, j) in d) Txn.fromJson(id, j)]..sort((a, b) => b.at.compareTo(a.at)));
+    listen('transactions', (d) {
+      final all = [for (final (id, j) in d) Txn.fromJson(id, j)]..sort((a, b) => b.at.compareTo(a.at));
+      txns = [for (final t in all) if (t.cancelledAt == null) t];
+      _cancelled = [for (final t in all) if (t.cancelledAt != null) t];
+    });
     listen('assets', (d) => assets = [for (final (id, j) in d) Asset.fromJson(id, j)]..sort((a, b) => b.valuation.compareTo(a.valuation)));
     listen('fixed', (d) => fixed = [for (final (id, j) in d) FixedExpense.fromJson(id, j)]..sort((a, b) => a.day.compareTo(b.day)));
     listen('notices', (d) => pending = [for (final (id, j) in d) PendingNotice.fromJson(id, j)]..sort((a, b) => b.at.compareTo(a.at)));
@@ -56,6 +60,9 @@ class AppModel extends ChangeNotifier {
   var _busy = Future<void>.value();
 
   List<Txn> txns = const [];
+  List<Txn> _cancelled = const [];
+  var disposed = false;
+  DateTime? _dropAlerted;
   List<Asset> assets = const [];
   List<FixedExpense> fixed = const [];
   List<PendingNotice> pending = const [];
@@ -74,10 +81,12 @@ class AppModel extends ChangeNotifier {
 
   void _fail(Object e) {
     error = e;
-    notifyListeners();
+    _changed();
   }
 
-  void _changed() => notifyListeners();
+  void _changed() {
+    if (!disposed) notifyListeners();
+  }
 
   // ── 계산 ────────────────────────────────────────────
   int get total => assets.fold(0, (a, x) => a + x.valuation.round());
@@ -113,7 +122,7 @@ class AppModel extends ChangeNotifier {
   bool get over => settings != null && todayLeft < 0;
   int get tomorrowBudget {
     final t = DateTime(today.year, today.month, today.day + 1);
-    return plan?.available(t, _uses) ?? 0;
+    return settings?.planFor(t, fixed).available(t, _uses) ?? 0;
   }
 
   Set<DateTime> get recordDays => {for (final t in txns) dateOnly(t.at)};
@@ -140,11 +149,15 @@ class AppModel extends ChangeNotifier {
     return p != null && daysBetween(p.at, today) == 1 && isSharpDrop(p.total, total);
   }
 
-  /// 저축 기록으로 본 월평균 저축액. 기록이 없으면 설정값.
+  /// 먼저 저축할 금액에 최근 30일 추가 저축을 더한 값.
   int get monthlySaving {
     final from = DateTime(today.year, today.month, today.day - 30);
-    final s = savings.where((t) => t.at.isAfter(from)).fold(0, (a, t) => a + t.amount);
-    return s > 0 ? s : settings?.saving ?? 0;
+    final extra = savings.where((t) => t.at.isAfter(from)).fold(0, (a, t) => a + t.amount);
+    return (settings?.saving ?? 0) + extra;
+  }
+
+  void _alert(AppAlert a) {
+    if (!disposed) _alerts.add(a);
   }
 
   // ── 변경 ────────────────────────────────────────────
@@ -161,17 +174,17 @@ class AppModel extends ChangeNotifier {
         final p = parseNotice(raw, at);
         if (p == null) {
           if (!looksLikePayment(raw)) return NoticeResult.ignored;
-          if (pending.any((n) => n.raw == raw && n.app == app)) return NoticeResult.duplicate;
-          await store.set('notices', store.newId(),
-              PendingNotice(id: '', raw: raw.length > 2000 ? raw.substring(0, 2000) : raw, app: app, at: at).toJson());
-          await _settle();
-          return NoticeResult.pending;
+          if (pending.any((n) => n.raw == raw && n.app == app && n.at.difference(at).abs() <= const Duration(minutes: 3))) return NoticeResult.duplicate;
+          return _keepPending(raw, app, at);
         }
         if (p.cancelled) {
-          final hit = txns.where((t) =>
-              t.kind == TxnKind.expense && t.amount == p.amount && t.merchant == p.merchant && !t.at.isAfter(p.at));
-          if (hit.isEmpty) return NoticeResult.ignored;
-          await store.remove('transactions', hit.first.id);
+          bool same(Txn t) => t.kind == TxnKind.expense && t.amount == p.amount && sameMerchant(t.merchant, p.merchant);
+          if (_cancelled.any((t) => same(t) && t.cancelledAt!.difference(p.at).abs() <= const Duration(minutes: 3))) {
+            return NoticeResult.duplicate;
+          }
+          final hit = txns.where((t) => same(t) && !t.at.isAfter(p.at));
+          if (hit.isEmpty) return _keepPending(raw, app, at);
+          await store.set('transactions', hit.first.id, hit.first.copyWith(cancelledAt: p.at).toJson());
           await _settle();
           return NoticeResult.cancelled;
         }
@@ -180,40 +193,78 @@ class AppModel extends ChangeNotifier {
         if (dup) return NoticeResult.duplicate;
         await _put(Txn(
             id: store.newId(), kind: TxnKind.expense, amount: p.amount, merchant: p.merchant,
-            category: categorize(p.merchant), at: p.at, source: app, confirmed: false));
+            category: _isFixed(p) ? Category.fixed : categorize(p.merchant), at: p.at, source: app, confirmed: false));
         return NoticeResult.recorded;
+      });
+
+  Future<NoticeResult> _keepPending(String raw, String app, DateTime at) async {
+    await store.set('notices', store.newId(),
+        PendingNotice(id: '', raw: raw.length > 2000 ? raw.substring(0, 2000) : raw, app: app, at: at).toJson());
+    await _settle();
+    return NoticeResult.pending;
+  }
+
+  /// 등록한 고정지출이 실제로 빠져나간 알림인가. 이름, 금액, 날짜가 모두 맞아야 한다.
+  bool _isFixed(ParsedNotice p) => fixed.any((f) {
+        if (f.amount != p.amount || !sameMerchant(f.name, p.merchant)) return false;
+        final from = DateTime(p.at.year, p.at.month, p.at.day - 3);
+        return daysBetween(from, f.nextDue(from)) <= 6;
       });
 
   Future<void> addTxn(TxnKind kind, int amount, String merchant, Category category, DateTime at, {String source = '직접 입력'}) =>
       _serial(() => _put(Txn(
           id: store.newId(), kind: kind, amount: amount, merchant: merchant, category: category, at: at, source: source)));
 
-  Future<void> _put(Txn t) async {
+  Future<void> _put(Txn t, {List<Op> also = const []}) async {
     if (t.amount <= 0) throw ArgumentError('금액은 1원 이상이어야 해요');
     final wasOver = over;
     final newDay = !recordDays.contains(dateOnly(t.at));
-    await store.set('transactions', t.id, t.toJson());
+    await store.commit([Op.set('transactions', t.id, t.toJson()), _points((newDay ? 10 : 2) + (t.kind == TxnKind.saving ? 20 : 0)), ...also]);
     await _settle();
-    await _award((newDay ? 10 : 2) + (t.kind == TxnKind.saving ? 20 : 0));
     if (!wasOver && over && t.kind == TxnKind.expense && dateOnly(t.at) == today) {
-      _alerts.add(AppAlert(AlertKind.overBudget, '오늘 생활비를 ${won(-todayLeft)} 넘었어요',
+      _alert(AppAlert(AlertKind.overBudget, '오늘 생활비를 ${won(-todayLeft)} 넘었어요',
           tomorrowBudget > 0 ? '내일 쓸 수 있는 돈은 ${won(tomorrowBudget)}이에요' : '내일 생활비까지 다 썼어요. 부족한 ${won(-tomorrowBudget)}은 그다음 날에서 빠져요'));
     }
   }
 
   Future<void> _award(int points) async {
-    await store.mergeUser({'points': xp + points, 'currentLevel': levelOf(xp + points)});
+    await store.commit([_points(points)]);
     await _settle();
   }
 
-  Future<void> updateTxn(Txn t) => store.set('transactions', t.id, t.toJson());
+  Op _points(int n) => Op.user({'points': Inc(n), 'currentLevel': levelOf(xp + n)});
+
+  Future<void> updateTxn(Txn t) => _serial(() async {
+        final old = txns.where((x) => x.id == t.id);
+        if (old.isNotEmpty && _leftover(old.first) && (old.first.amount != t.amount || !_leftover(t))) {
+          throw ArgumentError('저축 기록은 금액을 고칠 수 없어요. 지우고 다시 보내 주세요.');
+        }
+        await store.set('transactions', t.id, t.toJson());
+        await _settle();
+      });
+
+  bool _leftover(Txn t) => t.kind == TxnKind.saving && t.source == leftoverSource;
   Future<void> confirmTxn(Txn t) => updateTxn(t.copyWith(confirmed: true));
-  Future<void> deleteTxn(String id) => store.remove('transactions', id);
+
+  /// 저축 기록을 지우면 저축 자산에 더했던 금액도 되돌린다.
+  Future<void> deleteTxn(String id) => _serial(() async {
+        final t = txns.where((x) => x.id == id).firstOrNull;
+        final a = assets.where((x) => x.id == savingAssetId).firstOrNull;
+        await store.commit([
+          Op.remove('transactions', id),
+          if (t != null && _leftover(t) && a != null) _moveSaving(a, t.amount > a.valuation ? -a.valuation : -t.amount),
+        ]);
+        await _settle();
+      });
+
+  Op _moveSaving(Asset a, num v) => Op.merge('assets', a.id, a.quantity > 0
+      ? {'currentPrice': Inc(v / a.quantity), 'purchasePrice': Inc(v < 0 && a.purchasePrice < -v / a.quantity ? -a.purchasePrice : v / a.quantity)}
+      : {'quantity': 1, 'currentPrice': v, 'purchasePrice': v});
 
   Future<void> resolveNotice(PendingNotice n, int amount, String merchant, Category c) async {
-    await _serial(() => _put(Txn(
-        id: store.newId(), kind: TxnKind.expense, amount: amount, merchant: merchant, category: c, at: n.at, source: n.app)));
-    await store.remove('notices', n.id);
+    await _serial(() => _put(
+        Txn(id: store.newId(), kind: TxnKind.expense, amount: amount, merchant: merchant, category: c, at: n.at, source: n.app),
+        also: [Op.remove('notices', n.id)]));
   }
 
   Future<void> dismissNotice(PendingNotice n) => store.remove('notices', n.id);
@@ -224,15 +275,14 @@ class AppModel extends ChangeNotifier {
   Future<int> sendLeftoverToSaving(int amount) => _serial(() async {
         final v = amount.clamp(0, todayLeft < 0 ? 0 : todayLeft);
         if (v == 0) return 0;
-        await _put(Txn(
-            id: store.newId(), kind: TxnKind.saving, amount: v, merchant: '목표 저축', category: Category.etc, at: now, source: leftoverSource));
-        final old = assets.where((a) => a.id == savingAssetId);
-        await store.set('assets', savingAssetId, {
-          'name': 'Liqua 저축', 'category': 'deposit', 'quantity': 1,
-          'purchasePrice': (old.isEmpty ? 0 : old.first.currentPrice) + v,
-          'currentPrice': (old.isEmpty ? 0 : old.first.currentPrice) + v,
-        });
-        await _settle();
+        final old = assets.where((a) => a.id == savingAssetId).firstOrNull;
+        await _put(
+            Txn(id: store.newId(), kind: TxnKind.saving, amount: v, merchant: '목표 저축', category: Category.etc, at: now, source: leftoverSource),
+            also: [
+              old == null
+                  ? Op.merge('assets', savingAssetId, {'name': 'Liqua 저축', 'category': 'deposit', 'quantity': 1, 'purchasePrice': Inc(v), 'currentPrice': Inc(v)})
+                  : _moveSaving(old, v)
+            ]);
         await _milestones();
         return v;
       });
@@ -242,6 +292,13 @@ class AppModel extends ChangeNotifier {
         await store.set('assets', isNew ? store.newId() : a.id, a.toJson());
         await _settle();
         if (isNew) await _award(10);
+        await _milestones();
+      });
+  /// 시세만 바꾼다. 그사이 고친 다른 값은 건드리지 않는다.
+  Future<void> updatePrice(String id, double price) => _serial(() async {
+        if (!assets.any((a) => a.id == id)) return;
+        await store.commit([Op.merge('assets', id, {'currentPrice': price})]);
+        await _settle();
         await _milestones();
       });
   Future<void> deleteAsset(String id) => store.remove('assets', id);
@@ -258,7 +315,7 @@ class AppModel extends ChangeNotifier {
     await _settle();
     await _award(50 * fresh.length);
     final m = fresh.last;
-    _alerts.add(AppAlert(AlertKind.milestone, '목표의 $m%를 모았어요',
+    _alert(AppAlert(AlertKind.milestone, '목표의 $m%를 모았어요',
         m == 100 ? '왕관을 받았어요. 다음 목표를 정해 볼까요?' : '펫이 경험치 ${50 * fresh.length}을 받았어요'));
   }
 
@@ -282,13 +339,17 @@ class AppModel extends ChangeNotifier {
         final id = '${today.year}-${'${today.month}'.padLeft(2, '0')}-${'${today.day}'.padLeft(2, '0')}';
         await store.set('snapshots', id, {'at': now, 'total': total});
         await _settle();
-        if (sharpDrop) {
-          _alerts.add(AppAlert(AlertKind.sharpDrop, '자산이 하루 만에 ${won(previousSnapshot!.total - total)} 줄었어요', '자산 탭에서 바뀐 항목을 확인해 보세요'));
+        if (sharpDrop && _dropAlerted != today) {
+          _dropAlerted = today;
+          _alert(AppAlert(AlertKind.sharpDrop, '자산이 하루 만에 ${won(previousSnapshot!.total - total)} 줄었어요', '자산 탭에서 바뀐 항목을 확인해 보세요'));
         }
       });
 
+  void reportError(Object e) => _fail(e);
+
   @override
   void dispose() {
+    disposed = true;
     for (final s in _subs) {
       s.cancel();
     }

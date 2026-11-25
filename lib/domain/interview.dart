@@ -29,11 +29,13 @@ Profile? answer(Profile p, Ask ask, String raw) {
       return v == null || v < 14 || v > 100 ? null : next(age: v);
     case Ask.income:
       if (RegExp(r'없|0원').hasMatch(s) && !RegExp(r'[1-9]').hasMatch(s)) return next(income: 0);
+      final h = RegExp(r'(\d+)\s*(천|백)\s*만').firstMatch(s);
+      if (h != null) return next(income: int.parse(h[1]!) * (h[2] == '천' ? 10000000 : 1000000));
       final m = RegExp(r'(?:\d+(?:\.\d+)?억)?\s*[\d,]+(?:\.\d+)?\s*만?\s*원?').firstMatch(s);
       final v = m == null ? null : parseWon(m[0]!);
       if (v == null) return null;
       // "120 정도" 처럼 단위를 뺀 작은 수는 만 원으로 본다.
-      return next(income: v > 0 && v < 10000 ? v * 10000 : v);
+      return next(income: v > 0 && v < 10000 && !m![0]!.contains('원') ? v * 10000 : v);
     case Ask.region:
       for (final e in {..._long, ..._city}.entries) {
         if (s.contains(e.key)) return next(region: e.value);
@@ -43,11 +45,13 @@ Profile? answer(Profile p, Ask ask, String raw) {
       }
       return null;
     case Ask.experience:
+      if (RegExp(r'많이?\s*안|별로').hasMatch(s)) return next(exp: '조금');
       if (RegExp(r'꾸준|많|자주|오래').hasMatch(s)) return next(exp: '꾸준히');
       if (RegExp(r'처음|없|안\s*해|아니').hasMatch(s)) return next(exp: '처음');
       if (RegExp(r'조금|있|해\s*봤|네').hasMatch(s)) return next(exp: '조금');
       return null;
     case Ask.risk:
+      if (RegExp(r'안\s*괜찮|못|싫|무서').hasMatch(s)) return next(risk: '낮음');
       if (RegExp(r'감수|괜찮아요|높').hasMatch(s) && !s.contains('조금')) return next(risk: '높음');
       if (RegExp(r'조금|보통').hasMatch(s)) return next(risk: '보통');
       if (RegExp(r'싫|안|낮|무서').hasMatch(s)) return next(risk: '낮음');

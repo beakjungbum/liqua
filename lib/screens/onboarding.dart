@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mm_app/data/models.dart';
+import 'package:mm_app/domain/budget.dart';
 import 'package:mm_app/domain/growth.dart';
 import 'package:mm_app/domain/interview.dart';
 import 'package:mm_app/domain/money.dart';
@@ -149,9 +150,10 @@ class PlanScreen extends StatefulWidget {
 
 class _PlanScreenState extends State<PlanScreen> {
   final form = GlobalKey<FormState>();
-  final living = TextEditingController(), saving = TextEditingController(), target = TextEditingController();
+  final living = TextEditingController(), monthly = TextEditingController(), saving = TextEditingController(), target = TextEditingController();
   int? payday = 25;
   var loaded = false;
+  var restart = false;
 
   @override
   void didChangeDependencies() {
@@ -161,12 +163,14 @@ class _PlanScreenState extends State<PlanScreen> {
     final m = AppScope.of(context);
     final s = m.settings;
     if (s != null) {
-      living.text = comma(s.living);
+      final firstNow = m.plan!.start == dateOnly(s.start);
+      living.text = comma(firstNow ? s.firstLiving ?? s.living : s.living);
+      monthly.text = comma(s.living);
       saving.text = comma(s.saving);
       payday = s.payday;
     }
     if (m.target > 0) target.text = comma(m.target);
-    for (final c in [living, saving]) {
+    for (final c in [living, monthly, saving]) {
       c.addListener(() => setState(() {}));
     }
   }
@@ -174,6 +178,7 @@ class _PlanScreenState extends State<PlanScreen> {
   @override
   void dispose() {
     living.dispose();
+    monthly.dispose();
     saving.dispose();
     target.dispose();
     super.dispose();
@@ -183,7 +188,14 @@ class _PlanScreenState extends State<PlanScreen> {
   Widget build(BuildContext context) {
     final m = AppScope.of(context);
     final l = parseWon(living.text), s = parseWon(saving.text) ?? 0;
-    final draft = PlanSettings(living: l ?? 0, saving: s, start: m.today, payday: payday);
+    final old = m.settings;
+    final fresh = old == null || restart;
+    final start = fresh ? m.today : old.start;
+    // 첫 기간이 한 달보다 짧으면 그다음 달 금액을 따로 묻는다.
+    final probe = PlanSettings(living: 0, saving: 0, start: start, payday: payday).planFor(m.now, const []);
+    final partial = probe.start == dateOnly(start) && probe.days < 28;
+    final month = partial ? parseWon(monthly.text) ?? l : l;
+    final draft = PlanSettings(living: month ?? 0, firstLiving: partial ? l : old?.firstLiving, saving: s, start: start, payday: payday);
     final plan = draft.planFor(m.now, m.fixed);
     return Scaffold(
         appBar: AppBar(title: Text(widget.first ? '하루 생활비 정하기' : '생활비 설정'), actions: [if (widget.onExit != null) TextButton(onPressed: widget.onExit, child: const Text('나가기'))]),
@@ -191,7 +203,8 @@ class _PlanScreenState extends State<PlanScreen> {
             child: Form(
                 key: form,
                 child: ListView(padding: const EdgeInsets.all(20), children: [
-                  MoneyField(living, '다음 수입일까지 쓸 생활비', helper: '고정지출과 저축할 돈을 포함한 금액이에요'),
+                  MoneyField(living, partial ? '다음 수입일까지 쓸 생활비' : '한 기간에 쓸 생활비', helper: '고정지출과 저축할 돈을 포함한 금액이에요'),
+                  if (partial) MoneyField(monthly, '그다음부터 한 달 생활비', helper: '수입일이 지나면 이 금액으로 바뀌어요'),
                   MoneyField(saving, '먼저 저축할 금액', allowZero: true),
                   if (widget.first) MoneyField(target, '모으고 싶은 목표 금액'),
                   DropdownButtonFormField<int?>(isExpanded: true, 
@@ -202,6 +215,8 @@ class _PlanScreenState extends State<PlanScreen> {
                         for (var d = 1; d <= 31; d++) DropdownMenuItem(value: d, child: Text('매달 $d일'))
                       ],
                       onChanged: (v) => setState(() => payday = v)),
+                  if (old != null && !widget.first)
+                    SwitchListTile(contentPadding: EdgeInsets.zero, value: restart, onChanged: (v) => setState(() => restart = v), title: const Text('오늘부터 새 기간 시작'), subtitle: const Text('켜면 이월과 초과를 처음부터 다시 세요')),
                   const SizedBox(height: 18),
                   if (l != null && l > 0)
                     SoftCard(

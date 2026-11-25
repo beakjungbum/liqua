@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:mm_app/data/app_model.dart';
 import 'package:mm_app/data/models.dart';
+import 'package:mm_app/data/store.dart';
 import 'package:mm_app/domain/money.dart';
 import 'package:timezone/data/latest_10y.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
@@ -18,7 +19,7 @@ class DeviceService {
   final _local = FlutterLocalNotificationsPlugin();
   var _ready = false;
   var _draining = false;
-  var _again = false;
+  AppModel? _again;
 
   bool get supportsCapture => !kIsWeb && Platform.isAndroid;
 
@@ -38,39 +39,59 @@ class DeviceService {
   Future<bool> captureEnabled() async => supportsCapture && (await _ch.invokeMethod<bool>('enabled') ?? false);
   Future<void> openCaptureSettings() async => supportsCapture ? await _ch.invokeMethod('openSettings') : null;
 
-  void onArrived(Future<void> Function() f) {
+  /// 알림은 이 계정으로만 모은다. 다른 계정의 대기열은 읽지 않는다.
+  Future<void> setOwner(String? uid) async {
+    if (supportsCapture) await _ch.invokeMethod('setOwner', uid);
+  }
+
+  /// 로그아웃하면 남은 알림과 예약을 지운다.
+  Future<void> clearAccount() async {
+    onArrived(null);
+    try {
+      await setOwner(null);
+      if (_ready) await _local.cancelAll();
+    } catch (e) {
+      debugPrint('계정 정리 실패: $e');
+    }
+  }
+
+  void onArrived(Future<void> Function()? f) {
     if (!supportsCapture) return;
-    _ch.setMethodCallHandler((c) async {
+    _ch.setMethodCallHandler(f == null ? null : (c) async {
       if (c.method == 'arrived') await f();
     });
   }
 
   /// 저장까지 끝난 알림만 대기열에서 지운다.
   Future<void> drain(AppModel m) async {
-    if (!supportsCapture || !m.ready) return;
+    if (!supportsCapture || !m.ready || m.disposed) return;
     if (_draining) {
-      _again = true;
+      _again = m;
       return;
     }
     _draining = true;
     try {
       do {
-        _again = false;
+        m = _again ?? m;
+        _again = null;
         final list = await _ch.invokeListMethod<String>('peek') ?? const [];
-        var done = 0;
+        final owner = m.store is FirestoreStore ? (m.store as FirestoreStore).uid : 'demo';
+        final done = <String>[];
         for (final s in list) {
+          if (m.disposed) break;
           try {
             final j = jsonDecode(s) as Map<String, dynamic>;
+            if (j['owner'] != owner) continue;
             await m.handleNotice(j['raw'] as String,
                 app: j['app'] as String, at: DateTime.fromMillisecondsSinceEpoch((j['at'] as num).toInt()));
-            done++;
+            done.add(j['id'] as String);
           } catch (e) {
             debugPrint('알림 저장 실패: $e');
             break;
           }
         }
-        if (done > 0) await _ch.invokeMethod('ack', done);
-      } while (_again);
+        if (done.isNotEmpty) await _ch.invokeMethod('ack', done);
+      } while (_again != null);
     } finally {
       _draining = false;
     }
