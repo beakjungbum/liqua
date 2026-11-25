@@ -43,3 +43,13 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+.omc/
+*.jks
+*.keystore
+key.properties
+.env*
+*service-account*.json
+*serviceAccount*.json
+node_modules/
+*.tgz

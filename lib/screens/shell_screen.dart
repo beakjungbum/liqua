@@ -21,9 +21,12 @@ class _ShellScreenState extends State<ShellScreen> {
     final pages = [
       HomeScreen(entries: entries, goal: goal, onSettings: () => Navigator.push(
         context, MaterialPageRoute(builder: (_) => const SettingsScreen()))),
-        AssetScreen(entries: entries, onAdd: (e) => setState(() => entries.add(e))),
-        GoalScreen(goal: goal, onSave: (v) => setState(() => goal = v)),
-        ChatScreen(questions: questions, onAsk: (t) => setState(() => questions.add(t))),
+
+      AssetScreen(entries: entries, onAdd: (e) => setState(() => entries.add(e))),
+
+      GoalScreen(goal: goal, onSave: (v) => setState(() => goal = v)),
+      
+      ChatScreen(questions: questions, onAsk: (t) => setState(() => questions.add(t))),
       ];
     return Scaffold(
       body: pages[index],

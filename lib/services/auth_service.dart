@@ -71,6 +71,58 @@ class AuthService {
     await _auth.signOut();
   }
 
+  Stream<UserProgress> watchProgress() {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null || Firebase.apps.isEmpty) return const Stream.empty();
+    return _firestore.collection('users').doc(uid).snapshots().map((snapshot) {
+      return UserProgress.fromMap(snapshot.data());
+    });
+  }
+
+  Future<UserProgress> currentProgress() async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return const UserProgress();
+    final snapshot = await _firestore.collection('users').doc(uid).get();
+    return UserProgress.fromMap(snapshot.data());
+  }
+
+  Future<void> saveTargetAmount(int amount) async {
+    if (amount < 0) {
+      throw ArgumentError('목표 금액은 0보다 작을 수 없습니다.');
+    }
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) {
+      throw StateError('로그인 후 목표를 저장할 수 있습니다.');
+    }
+    await _firestore.collection('users').doc(uid).set({
+      'targetAmount': amount,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  /// 자산 문서가 새로 만들어진 뒤에만 호출한다.
+  void awardPointsForNewAsset({
+    required Transaction transaction,
+    required DocumentReference<Map<String, dynamic>> userRef,
+    required DocumentSnapshot<Map<String, dynamic>> userSnapshot,
+  }) {
+    final current = (userSnapshot.data()?['points'] as num?)?.toInt() ?? 0;
+    final points = current + 10;
+    final fields = <String, dynamic>{
+      'points': points,
+      'currentLevel': levelForPoints(points),
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+    if (userSnapshot.exists) {
+      transaction.update(userRef, fields);
+    } else {
+      fields['uid'] = userRef.id;
+      fields['targetAmount'] = 0;
+      fields['createdAt'] = FieldValue.serverTimestamp();
+      transaction.set(userRef, fields);
+    }
+  }
+
   /// 같은 uid 문서가 있으면 createdAt은 유지하고 프로필만 갱신한다.
   Future<void> ensureUserDocument(User user) async {
     final DocumentReference<Map<String, dynamic>> ref = _firestore
@@ -87,10 +139,23 @@ class AuthService {
         'photoUrl': user.photoURL,
         'updatedAt': FieldValue.serverTimestamp(),
       };
+      final data = snapshot.data();
       if (snapshot.exists) {
+        if (data == null || !data.containsKey('targetAmount')) {
+          profile['targetAmount'] = 0;
+        }
+        if (data == null || !data.containsKey('points')) {
+          profile['points'] = 0;
+        }
+        if (data == null || !data.containsKey('currentLevel')) {
+          profile['currentLevel'] = 1;
+        }
         transaction.update(ref, profile);
       } else {
         profile['createdAt'] = FieldValue.serverTimestamp();
+        profile['targetAmount'] = 0;
+        profile['points'] = 0;
+        profile['currentLevel'] = 1;
         transaction.set(ref, profile);
       }
     });
@@ -131,4 +196,38 @@ class AuthService {
     await GoogleSignIn.instance.initialize();
     _googleInitialized = true;
   }
+}
+
+class UserProgress {
+  const UserProgress({
+    this.targetAmount = 0,
+    this.points = 0,
+    this.currentLevel = 1,
+  });
+
+  final int targetAmount;
+  final int points;
+  final int currentLevel;
+
+  factory UserProgress.fromMap(Map<String, dynamic>? data) {
+    final points = (data?['points'] as num?)?.toInt() ?? 0;
+    return UserProgress(
+      targetAmount: (data?['targetAmount'] as num?)?.toInt() ?? 0,
+      points: points,
+      currentLevel:
+          (data?['currentLevel'] as num?)?.toInt() ?? levelForPoints(points),
+    );
+  }
+}
+
+int levelForPoints(int points) {
+  if (points >= 600) return 4;
+  if (points >= 300) return 3;
+  if (points >= 100) return 2;
+  return 1;
+}
+
+double achievementPercent(double totalAssets, int targetAmount) {
+  if (targetAmount <= 0) return 0;
+  return totalAssets / targetAmount * 100;
 }

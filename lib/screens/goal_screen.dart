@@ -77,3 +77,4 @@ class _GoalScreenState extends State<GoalScreen> {
     );
   }
 }
+String _amountText(int amount) => amount == 0 ? '' : '$amount';
