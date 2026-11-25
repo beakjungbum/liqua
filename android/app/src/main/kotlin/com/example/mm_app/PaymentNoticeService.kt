@@ -38,7 +38,7 @@ class PaymentNoticeService : NotificationListenerService() {
             "com.kebhana.hanapush", "com.wooricard.smartapp", "com.wooribank.smart.npib", "nh.smart.nhallonepay",
             "nh.smart.banking", "com.kakaobank.channel", "com.kakaopay.app", "viva.republica.toss", "com.nhn.android.search",
             "com.naverfin.payapp", "com.samsung.android.spay", "com.nhnent.payapp")
-        val PAYMENT = Regex("승인|결제")
+        val PAYMENT = Regex("승인|결제|취소|환불")
         val AMOUNT = Regex("\\d\\s*원")
     }
 }

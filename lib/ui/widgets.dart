@@ -31,6 +31,9 @@ Future<T?> sheet<T>(BuildContext c, Widget child) {
 /// 99.6% 를 100% 로 올려 보이지 않는다.
 String percentText(double p) => p < 10 ? '${(p * 10).floor() / 10}' : '${p.clamp(0, 999).floor()}';
 
+/// 제스처 바에 가리지 않게 아래 여백을 더한다.
+EdgeInsets pagePad(BuildContext c) => EdgeInsets.fromLTRB(20, 20, 20, 20 + MediaQuery.paddingOf(c).bottom);
+
 void toast(BuildContext c, String s) => ScaffoldMessenger.of(c)
   ..hideCurrentSnackBar()
   ..showSnackBar(SnackBar(content: Text(s)));
@@ -55,18 +58,18 @@ String saveError(Object e) {
 }
 
 class SoftCard extends StatelessWidget {
-  const SoftCard({super.key, required this.child, this.color = AppColors.card, this.padding = const EdgeInsets.all(18), this.onTap});
+  const SoftCard({super.key, required this.child, this.color, this.padding = const EdgeInsets.all(18), this.onTap});
   final Widget child;
-  final Color color;
+  final Color? color;
   final EdgeInsets padding;
   final VoidCallback? onTap;
   @override
   Widget build(BuildContext context) => Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.only(bottom: 12),
       child: Material(
-          color: color,
+          color: color ?? AppColors.card,
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(22), side: color == AppColors.card ? const BorderSide(color: AppColors.line) : BorderSide.none),
+              borderRadius: BorderRadius.circular(22), side: color == null ? BorderSide(color: AppColors.line) : BorderSide.none),
           clipBehavior: Clip.antiAlias,
           child: InkWell(onTap: onTap, child: Padding(padding: padding, child: SizedBox(width: double.infinity, child: child)))));
 }
@@ -78,40 +81,40 @@ class Section extends StatelessWidget {
   final VoidCallback? onAction;
   @override
   Widget build(BuildContext context) => Row(children: [
-        Expanded(child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700))),
+        Expanded(child: Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700))),
         if (action != null) TextButton(onPressed: onAction, child: Text(action!)),
       ]);
 }
 
 class Won extends StatelessWidget {
-  const Won(this.value, {super.key, this.size = 30, this.color = AppColors.deep});
+  const Won(this.value, {super.key, this.size = 30, this.color});
   final int value;
   final double size;
-  final Color color;
+  final Color? color;
   @override
   Widget build(BuildContext context) => FittedBox(
       fit: BoxFit.scaleDown,
       alignment: Alignment.centerLeft,
       child: TweenAnimationBuilder<double>(
           tween: Tween(end: value.toDouble()),
-          duration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : const Duration(milliseconds: 600),
+          duration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : Duration(milliseconds: 600),
           curve: Curves.easeOutExpo,
           builder: (_, v, _) => Text(won(v.round()),
-              style: TextStyle(fontSize: size, fontWeight: FontWeight.w800, color: color, letterSpacing: -.6, fontFeatures: const [FontFeature.tabularFigures()]))));
+              style: TextStyle(fontSize: size, fontWeight: FontWeight.w800, color: color ?? AppColors.deep, letterSpacing: -.6, fontFeatures: [FontFeature.tabularFigures()]))));
 }
 
 class Bar extends StatelessWidget {
-  const Bar(this.value, {super.key, this.color = AppColors.olive, this.track = AppColors.mist, this.height = 10});
+  const Bar(this.value, {super.key, this.color, this.track, this.height = 10});
   final double value, height;
-  final Color color, track;
+  final Color? color, track;
   @override
   Widget build(BuildContext context) => ClipRRect(
       borderRadius: BorderRadius.circular(height),
       child: TweenAnimationBuilder<double>(
           tween: Tween(end: value.isFinite ? value.clamp(0, 1).toDouble() : 0),
-          duration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : const Duration(milliseconds: 700),
+          duration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : Duration(milliseconds: 700),
           curve: Curves.easeOutExpo,
-          builder: (_, v, _) => LinearProgressIndicator(value: v, minHeight: height, color: color, backgroundColor: track)));
+          builder: (_, v, _) => LinearProgressIndicator(value: v, minHeight: height, color: color ?? AppColors.olive, backgroundColor: track ?? AppColors.mist)));
 }
 
 class Donut extends StatelessWidget {
@@ -174,13 +177,13 @@ class _TrendPainter extends CustomPainter {
       ..lineTo(s.width - 4, s.height)
       ..lineTo(4, s.height)
       ..close();
-    c.drawPath(area, Paint()..color = Colors.white.withValues(alpha: .16));
+    c.drawPath(area, Paint()..color = AppColors.ink.withValues(alpha: .1));
     c.drawPath(line, Paint()
-      ..color = Colors.white
+      ..color = AppColors.ink
       ..style = PaintingStyle.stroke
       ..strokeJoin = StrokeJoin.round
       ..strokeWidth = 2.4);
-    c.drawCircle(at(v.length - 1), 4.5, Paint()..color = Colors.white);
+    c.drawCircle(at(v.length - 1), 4.5, Paint()..color = AppColors.ink);
   }
 
   @override
@@ -199,7 +202,7 @@ class Mascot extends StatefulWidget {
 }
 
 class _MascotState extends State<Mascot> with SingleTickerProviderStateMixin {
-  late final _a = AnimationController(vsync: this, duration: const Duration(milliseconds: 2600));
+  late final _a = AnimationController(vsync: this, duration: Duration(milliseconds: 2600));
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -242,7 +245,7 @@ class StageDecor extends CustomPainter {
   @override
   void paint(Canvas c, Size s) {
     c.scale(s.width / 100);
-    final o = const Offset(43, 16);
+    final o = Offset(43, 16);
     Paint f(Color k) => Paint()..color = k;
     final st = Paint()
       ..color = _line
@@ -261,8 +264,8 @@ class StageDecor extends CustomPainter {
             ..moveTo(0, 4)
             ..quadraticBezierTo(-5, -2, 0, -8)
             ..quadraticBezierTo(5, -2, 0, 4);
-          c.drawPath(leaf, f(const Color(0xFF8FB258)));
-          c.drawPath(leaf, st..color = const Color(0xFF4F6B2C));
+          c.drawPath(leaf, f(Color(0xFF8FB258)));
+          c.drawPath(leaf, st..color = Color(0xFF4F6B2C));
           c.restore();
         }
       case PetStage.flower:
@@ -271,22 +274,22 @@ class StageDecor extends CustomPainter {
             ..moveTo(o.dx, o.dy + 4)
             ..cubicTo(o.dx - 9, o.dy, o.dx - 5, o.dy - 9, o.dx, o.dy - 11)
             ..cubicTo(o.dx + 5, o.dy - 9, o.dx + 9, o.dy, o.dx, o.dy + 4);
-          c.drawPath(bud, f(const Color(0xFFF6A6A0)));
+          c.drawPath(bud, f(Color(0xFFF6A6A0)));
           c.drawPath(bud, st);
         } else {
-          c.drawCircle(o.translate(0, -4), 19, Paint()..shader = RadialGradient(colors: [const Color(0xFFFFE9A8), const Color(0xFFFFE9A8).withValues(alpha: 0)]).createShader(Rect.fromCircle(center: o.translate(0, -4), radius: 19)));
+          c.drawCircle(o.translate(0, -4), 19, Paint()..shader = RadialGradient(colors: [Color(0xFFFFE9A8), Color(0xFFFFE9A8).withValues(alpha: 0)]).createShader(Rect.fromCircle(center: o.translate(0, -4), radius: 19)));
           for (var i = 0; i < 5; i++) {
             final a = -pi / 2 + i * 2 * pi / 5;
             final p = o.translate(cos(a) * 6.4, sin(a) * 6.4 - 4);
-            c.drawCircle(p, 4.8, f(const Color(0xFFF6A6A0)));
+            c.drawCircle(p, 4.8, f(Color(0xFFF6A6A0)));
             c.drawCircle(p, 4.8, st);
           }
-          c.drawCircle(o.translate(0, -4), 4, f(const Color(0xFFFFC94F)));
+          c.drawCircle(o.translate(0, -4), 4, f(Color(0xFFFFC94F)));
         }
       case PetStage.fruit:
         final ripe = percent >= 100;
         for (final (dx, dy) in ripe ? [(-9.0, 0.0), (9.0, -1.0), (0.0, -6.0)] : [(-6.0, 0.0), (6.0, -1.0)]) {
-          c.drawCircle(o.translate(dx, dy - 3), 5.2, f(const Color(0xFFE8703F)));
+          c.drawCircle(o.translate(dx, dy - 3), 5.2, f(Color(0xFFE8703F)));
           c.drawCircle(o.translate(dx, dy - 3), 5.2, st);
           c.drawCircle(o.translate(dx - 1.6, dy - 5), 1.3, f(Colors.white70));
         }
@@ -301,10 +304,10 @@ class StageDecor extends CustomPainter {
           ..lineTo(o.dx + w + 1, o.dy - 10)
           ..lineTo(o.dx + w, o.dy + 3)
           ..close();
-        c.drawPath(p, f(const Color(0xFFFFCB45)));
+        c.drawPath(p, f(Color(0xFFFFCB45)));
         c.drawPath(p, st);
         for (var i = 0; i < crowns.clamp(1, 3); i++) {
-          c.drawCircle(o.translate([0.0, -7.0, 7.0][i], -1), 1.9, f(const Color(0xFFD8503A)));
+          c.drawCircle(o.translate([0.0, -7.0, 7.0][i], -1), 1.9, f(Color(0xFFD8503A)));
         }
     }
     if (worried) {
@@ -312,7 +315,7 @@ class StageDecor extends CustomPainter {
         ..moveTo(84, 22)
         ..quadraticBezierTo(90, 31, 84, 34)
         ..quadraticBezierTo(78, 31, 84, 22);
-      c.drawPath(d, f(const Color(0xFF6FAEDD)));
+      c.drawPath(d, f(Color(0xFF6FAEDD)));
     }
   }
 
@@ -332,18 +335,18 @@ class MascotSays extends StatelessWidget {
     final m = AppScope.of(context);
     return SoftCard(
         color: worried ? AppColors.accentSoft : AppColors.mist,
-        padding: const EdgeInsets.fromLTRB(10, 6, 14, 6),
+        padding: EdgeInsets.fromLTRB(10, 6, 14, 6),
         onTap: onTap,
         child: Row(children: [
           Mascot(stage: m.stage, size: 84, percent: m.percent, crowns: m.completedGoals, worried: worried),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           Expanded(
               child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+                  padding: EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                  decoration: BoxDecoration(color: AppColors.card, borderRadius: BorderRadius.circular(20)),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(title, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: worried ? AppColors.accent : AppColors.text)),
-                    if (body.isNotEmpty) Text(body, style: const TextStyle(fontSize: 13, color: AppColors.sub, height: 1.4)),
+                    if (body.isNotEmpty) Text(body, style: TextStyle(fontSize: 13, color: AppColors.sub, height: 1.4)),
                   ]))),
         ]));
   }
@@ -372,12 +375,12 @@ class Between extends StatelessWidget {
 }
 
 class IconTile extends StatelessWidget {
-  const IconTile(this.icon, {super.key, this.color = AppColors.mist});
+  const IconTile(this.icon, {super.key, this.color});
   final IconData icon;
-  final Color color;
+  final Color? color;
   @override
   Widget build(BuildContext context) => Container(
-      width: 40, height: 40, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(13)),
+      width: 40, height: 40, decoration: BoxDecoration(color: color ?? AppColors.mist, borderRadius: BorderRadius.circular(13)),
       child: Icon(icon, size: 21, color: AppColors.deep));
 }
 
@@ -390,7 +393,7 @@ class MoneyField extends StatelessWidget {
   final bool autofocus, allowZero;
   @override
   Widget build(BuildContext context) => Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.only(bottom: 12),
       child: TextFormField(
           controller: controller,
           autofocus: autofocus,
@@ -434,7 +437,7 @@ class _SaveButtonState extends State<SaveButton> {
                   await widget.onSave();
                   if (mounted) setState(() => busy = false);
                 },
-          child: busy ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white)) : Text(widget.label)));
+          child: busy ? SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2.4, color: AppColors.ink)) : Text(widget.label)));
 }
 
 class Empty extends StatelessWidget {
@@ -442,6 +445,6 @@ class Empty extends StatelessWidget {
   final String text;
   @override
   Widget build(BuildContext context) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 18),
-      child: Center(child: Text(text, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.sub, height: 1.5))));
+      padding: EdgeInsets.symmetric(vertical: 18),
+      child: Center(child: Text(text, textAlign: TextAlign.center, style: TextStyle(color: AppColors.sub, height: 1.5))));
 }

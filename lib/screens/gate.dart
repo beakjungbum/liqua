@@ -44,12 +44,12 @@ class _GateState extends State<Gate> {
 
   @override
   Widget build(BuildContext context) {
-    if (model?.demo ?? false) return Session(key: const ValueKey('demo'), model: model!, onExit: () => setState(() => use(null, null)));
+    if (model?.demo ?? false) return Session(key: ValueKey('demo'), model: model!, onExit: () => setState(() => use(null, null)));
     if (Firebase.apps.isEmpty) return LoginScreen(onDemo: demo, canSignIn: false);
     return StreamBuilder<User?>(
         stream: AuthService.instance.authStateChanges(),
         builder: (_, s) {
-          if (s.connectionState == ConnectionState.waiting) return const _Splash();
+          if (s.connectionState == ConnectionState.waiting) return _Splash();
           final user = s.data;
           if (user == null) {
             if (uid != null) {
@@ -75,13 +75,13 @@ class _GateState extends State<Gate> {
 class _Splash extends StatelessWidget {
   const _Splash();
   @override
-  Widget build(BuildContext context) => const Scaffold(body: Center(child: Logo()));
+  Widget build(BuildContext context) => Scaffold(body: Center(child: Logo()));
 }
 
 class Logo extends StatelessWidget {
   const Logo({super.key});
   @override
-  Widget build(BuildContext context) => const Column(mainAxisSize: MainAxisSize.min, children: [
+  Widget build(BuildContext context) => Column(mainAxisSize: MainAxisSize.min, children: [
         Image(image: AssetImage('assets/images/mascot.png'), width: 132, excludeFromSemantics: true),
         SizedBox(height: 8),
         Text('Liqua', style: TextStyle(fontSize: 42, fontWeight: FontWeight.w800, letterSpacing: -1, color: AppColors.deep)),
@@ -113,7 +113,7 @@ class _Loading extends StatefulWidget {
 
 class _LoadingState extends State<_Loading> {
   var slow = false;
-  late final Timer _t = Timer(const Duration(seconds: 8), () => setState(() => slow = true));
+  late final Timer _t = Timer(Duration(seconds: 8), () => setState(() => slow = true));
   @override
   void initState() {
     super.initState();
@@ -130,11 +130,11 @@ class _LoadingState extends State<_Loading> {
   Widget build(BuildContext context) => Scaffold(
       body: Center(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const CircularProgressIndicator(),
+        CircularProgressIndicator(),
         if (slow) ...[
-          const SizedBox(height: 16),
-          const Text('처음 불러올 때는 인터넷 연결이 필요해요'),
-          TextButton(onPressed: widget.onExit, child: const Text('나가기')),
+          SizedBox(height: 16),
+          Text('처음 불러올 때는 인터넷 연결이 필요해요'),
+          TextButton(onPressed: widget.onExit, child: Text('나가기')),
         ],
       ])));
 }
@@ -147,13 +147,13 @@ class _LoadError extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
       body: SafeArea(
           child: Padding(
-              padding: const EdgeInsets.all(28),
+              padding: EdgeInsets.all(28),
               child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                const Text('내 데이터를 불러오지 못했어요', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
-                const SizedBox(height: 8),
-                Text(saveError(error), textAlign: TextAlign.center, style: const TextStyle(color: AppColors.sub)),
-                const SizedBox(height: 20),
-                FilledButton(onPressed: onExit, child: const Text('로그인 화면으로')),
+                Text('내 데이터를 불러오지 못했어요', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+                SizedBox(height: 8),
+                Text(saveError(error), textAlign: TextAlign.center, style: TextStyle(color: AppColors.sub)),
+                SizedBox(height: 20),
+                FilledButton(onPressed: onExit, child: Text('로그인 화면으로')),
               ]))));
 }
 
@@ -191,17 +191,17 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) => Scaffold(
       body: SafeArea(
           child: Padding(
-              padding: const EdgeInsets.fromLTRB(28, 20, 28, 28),
+              padding: EdgeInsets.fromLTRB(28, 20, 28, 28),
               child: Column(children: [
-                const Expanded(child: Center(child: SingleChildScrollView(child: Logo()))),
+                Expanded(child: Center(child: SingleChildScrollView(child: Logo()))),
                 if (error != null)
-                  Padding(padding: const EdgeInsets.only(bottom: 12), child: Semantics(liveRegion: true, child: Text(error!, style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.w600)))),
+                  Padding(padding: EdgeInsets.only(bottom: 12), child: Semantics(liveRegion: true, child: Text(error!, style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w600)))),
                 SizedBox(
                     width: double.infinity,
                     child: FilledButton(
                         onPressed: busy || !widget.canSignIn ? null : signIn,
                         child: Text(busy ? '로그인하는 중' : retry ? '다시 시도' : 'Google로 계속하기'))),
-                const SizedBox(height: 6),
-                TextButton(onPressed: busy ? null : widget.onDemo, child: const Text('로그인 없이 예시로 둘러보기')),
+                SizedBox(height: 6),
+                TextButton(onPressed: busy ? null : widget.onDemo, child: Text('로그인 없이 예시로 둘러보기')),
               ]))));
 }

@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mm_app/data/app_model.dart';
 import 'package:mm_app/data/demo.dart';
+import 'package:mm_app/data/models.dart';
 import 'package:mm_app/data/store.dart';
 import 'package:mm_app/main.dart';
 import 'package:mm_app/screens/book_screen.dart';
@@ -10,6 +13,7 @@ import 'package:mm_app/screens/gate.dart';
 import 'package:mm_app/screens/home_screen.dart';
 import 'package:mm_app/screens/onboarding.dart';
 import 'package:mm_app/screens/shell.dart';
+import 'package:mm_app/theme/app_theme.dart';
 import 'package:mm_app/ui/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -108,6 +112,49 @@ void main() {
     await t.tap(find.text('저장'));
     await t.pumpAndSettle();
     expect((m.todayLeft, m.settings!.start), before);
+  });
+
+  testWidgets('다크 모드로 바뀌면 배경과 글자색이 함께 바뀐다', (t) async {
+    await open(t, () => Shell(onExit: () {}), w: 400, h: 900);
+    Color bg() => t.widget<Material>(find.descendant(of: find.byType(Scaffold), matching: find.byType(Material)).first).color!;
+    expect(bg(), const Color(0xFFF5F8ED));
+    t.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
+    addTearDown(t.platformDispatcher.clearPlatformBrightnessTestValue);
+    await t.pumpAndSettle();
+    expect(bg(), const Color(0xFF11180F));
+    expect(t.widget<Text>(find.text('목표 달성률')).style?.color ?? AppColors.text, const Color(0xFFF5F8ED));
+    expect(t.takeException(), isNull);
+  });
+
+  testWidgets('새 기간을 시작하면 첫 기간 금액이 남지 않는다', (t) async {
+    final m = await open(t, () => Shell(onExit: () {}), w: 400, h: 900);
+    await m.saveSettings(PlanSettings(living: 900000, firstLiving: 100000, saving: 0, start: DateTime(2026, 11, 20), payday: 25));
+    push(t.element(find.byType(Shell)), const PlanScreen());
+    await t.pumpAndSettle();
+    await t.tap(find.byType(Switch));
+    await t.enterText(find.byType(TextFormField).at(0), '900000');
+    await t.pumpAndSettle();
+    await t.ensureVisible(find.text('저장'));
+    await t.tap(find.text('저장'));
+    await t.pumpAndSettle();
+    expect(m.settings!.firstLiving, isNull);
+    expect(m.plan!.living, 900000);
+  });
+
+  testWidgets('취소 알림에는 지출로 기록하는 버튼이 없다', (t) async {
+    final m = await open(t, () => Shell(onExit: () {}, initial: 1), w: 400, h: 2400);
+    unawaited(m.handleNotice('[KB국민카드] 9,000원 부분취소 다이소 11/25 10:00', app: '문자', at: at));
+    await t.pumpAndSettle();
+    expect(m.pending.length, 2);
+    expect(find.text('고쳐서 기록'), findsOneWidget);
+    expect(find.textContaining('취소 알림이에요'), findsOneWidget);
+  });
+
+  testWidgets('저장이 늦게 거절되면 알려 준다', (t) async {
+    final m = await open(t, () => Shell(onExit: () {}), w: 400, h: 900);
+    m.reportError(StateError('permission-denied'));
+    await t.pumpAndSettle();
+    expect(find.textContaining('저장 권한이 없어요'), findsOneWidget);
   });
 
   testWidgets('빈 금액은 저장되지 않고 이유를 보인다', (t) async {

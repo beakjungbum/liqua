@@ -16,8 +16,8 @@ Future<void> main() async {
       await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
     }
     await FirebaseAppCheck.instance.activate(
-      providerAndroid: kDebugMode ? const AndroidDebugProvider() : const AndroidPlayIntegrityProvider(),
-      providerApple: kDebugMode ? const AppleDebugProvider() : const AppleDeviceCheckProvider(),
+      providerAndroid: kDebugMode ? AndroidDebugProvider() : AndroidPlayIntegrityProvider(),
+      providerApple: kDebugMode ? AppleDebugProvider() : AppleDeviceCheckProvider(),
       providerWeb: kDebugMode ? WebDebugProvider() : null,
     );
     AuthService.instance.listenToAuthState();
@@ -30,20 +30,53 @@ Future<void> main() async {
   } catch (e) {
     debugPrint('알림 초기화 실패: $e');
   }
-  runApp(const LiquaApp());
+  runApp(LiquaApp());
 }
 
-class LiquaApp extends StatelessWidget {
+class LiquaApp extends StatefulWidget {
   const LiquaApp({super.key, this.home = const Gate()});
   final Widget home;
+  @override
+  State<LiquaApp> createState() => _LiquaAppState();
+}
+
+class _LiquaAppState extends State<LiquaApp> with WidgetsBindingObserver {
+  void _read() => AppColors.dark = WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _read();
+  }
+
+  /// 색을 위젯 트리 밖에서 읽으므로 밝기가 바뀌면 전부 다시 그린다.
+  @override
+  void didChangePlatformBrightness() {
+    setState(_read);
+    void again(Element e) {
+      e.markNeedsBuild();
+      e.visitChildren(again);
+    }
+
+    (context as Element).visitChildren(again);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => MaterialApp(
         title: 'Liqua',
         debugShowCheckedModeBanner: false,
-        theme: AppTheme.light,
+        theme: AppTheme.current,
+        themeAnimationDuration: Duration.zero,
         locale: const Locale('ko', 'KR'),
         supportedLocales: const [Locale('ko', 'KR')],
         localizationsDelegates: GlobalMaterialLocalizations.delegates,
-        home: home,
+        home: widget.home,
       );
 }

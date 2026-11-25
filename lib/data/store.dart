@@ -59,7 +59,7 @@ class FirestoreStore extends Store {
   @override
   Stream<Json> watchUser() => _user
       .snapshots(includeMetadataChanges: true)
-      .where((d) => !(d.metadata.isFromCache && d.data()?['createdAt'] == null))
+      .where((d) => !(d.metadata.isFromCache && !d.exists))
       .map((d) => (_fromFire(d.data() ?? <String, dynamic>{})! as Map).cast<String, dynamic>());
 
   static Json _toFire(Json d) => {for (final e in d.entries) e.key: e.value is Inc ? FieldValue.increment((e.value as Inc).by) : e.value};

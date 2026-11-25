@@ -29,6 +29,8 @@ Profile? answer(Profile p, Ask ask, String raw) {
       return v == null || v < 14 || v > 100 ? null : next(age: v);
     case Ask.income:
       if (RegExp(r'없|0원').hasMatch(s) && !RegExp(r'[1-9]').hasMatch(s)) return next(income: 0);
+      if (RegExp(r'억').hasMatch(s) && RegExp(r'[천백]').hasMatch(s)) return null;
+      if (RegExp(r'\d\s*[천백]\s*\d').hasMatch(s)) return null;
       final h = RegExp(r'(\d+)\s*(천|백)\s*만').firstMatch(s);
       if (h != null) return next(income: int.parse(h[1]!) * (h[2] == '천' ? 10000000 : 1000000));
       final m = RegExp(r'(?:\d+(?:\.\d+)?억)?\s*[\d,]+(?:\.\d+)?\s*만?\s*원?').firstMatch(s);
@@ -51,7 +53,7 @@ Profile? answer(Profile p, Ask ask, String raw) {
       if (RegExp(r'조금|있|해\s*봤|네').hasMatch(s)) return next(exp: '조금');
       return null;
     case Ask.risk:
-      if (RegExp(r'안\s*괜찮|못|싫|무서').hasMatch(s)) return next(risk: '낮음');
+      if (RegExp(r'안\s*괜찮|않|지\s*않|못|싫|무서').hasMatch(s)) return next(risk: '낮음');
       if (RegExp(r'감수|괜찮아요|높').hasMatch(s) && !s.contains('조금')) return next(risk: '높음');
       if (RegExp(r'조금|보통').hasMatch(s)) return next(risk: '보통');
       if (RegExp(r'싫|안|낮|무서').hasMatch(s)) return next(risk: '낮음');

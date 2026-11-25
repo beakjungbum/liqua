@@ -19,10 +19,12 @@ class Txn {
     this.source = '직접 입력',
     this.confirmed = true,
     this.cancelledAt,
+    this.cancelSource,
   });
 
   /// 취소된 결제는 합계에서 빼지만 중복 취소를 알아보려고 남긴다.
   final DateTime? cancelledAt;
+  final String? cancelSource;
   final String id;
   final TxnKind kind;
   final int amount;
@@ -46,6 +48,7 @@ class Txn {
         source: j['source'] as String? ?? '직접 입력',
         confirmed: j['confirmed'] as bool? ?? true,
         cancelledAt: j['cancelledAt'] is DateTime ? j['cancelledAt'] as DateTime : null,
+        cancelSource: j['cancelSource'] as String?,
       );
 
   Json toJson() => {
@@ -57,11 +60,12 @@ class Txn {
         'source': source,
         'confirmed': confirmed,
         if (cancelledAt != null) 'cancelledAt': cancelledAt,
+        if (cancelSource != null) 'cancelSource': cancelSource,
       };
 
-  Txn copyWith({int? amount, String? merchant, Category? category, DateTime? at, bool? confirmed, DateTime? cancelledAt}) => Txn(
+  Txn copyWith({int? amount, String? merchant, Category? category, DateTime? at, bool? confirmed, DateTime? cancelledAt, String? cancelSource}) => Txn(
       id: id, kind: kind, amount: amount ?? this.amount, merchant: merchant ?? this.merchant,
-      category: category ?? this.category, at: at ?? this.at, source: source, confirmed: confirmed ?? this.confirmed, cancelledAt: cancelledAt ?? this.cancelledAt);
+      category: category ?? this.category, at: at ?? this.at, source: source, confirmed: confirmed ?? this.confirmed, cancelledAt: cancelledAt ?? this.cancelledAt, cancelSource: cancelSource ?? this.cancelSource);
 
   ParsedNotice get asNotice => ParsedNotice(amount: amount, merchant: merchant, at: at, cancelled: false);
 }
@@ -69,6 +73,7 @@ class Txn {
 /// 해석하지 못한 결제 알림. 「확인 필요」 목록에 남는다.
 class PendingNotice {
   const PendingNotice({required this.id, required this.raw, required this.app, required this.at});
+  bool get isRefund => isRefundText(raw);
   final String id, raw, app;
   final DateTime at;
   factory PendingNotice.fromJson(String id, Json j) =>

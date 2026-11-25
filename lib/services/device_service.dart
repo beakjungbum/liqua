@@ -94,6 +94,7 @@ class DeviceService {
       } while (_again != null);
     } finally {
       _draining = false;
+      _again = null;
     }
   }
 

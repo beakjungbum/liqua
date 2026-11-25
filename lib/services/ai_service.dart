@@ -60,7 +60,7 @@ class AiService {
       ].join(', ');
 
   static bool asksMine(String q) =>
-      RegExp(r'(?<![가-힣])(내|나의|제|이번\s*달|오늘)\s.*(자산|목표|지출|소비|생활비|식비|카페|돈)|얼마나?\s*(남|썼|모)|달성률').hasMatch(q);
+      RegExp(r'(?<![가-힣])(내가?|나의|제|제가|이번\s*달에?|오늘은?)\s.*(자산|목표|지출|소비|생활비|식비|카페|돈)|얼마나?\s*(남|썼|모)|달성률').hasMatch(q);
 
   Future<AiAnswer> ask(String question, AppModel m) async {
     final q = question.trim();
@@ -106,6 +106,8 @@ class AiService {
           for (final m in RegExp(r'(\d[\d,]*(?:\.\d+)?(?:억|만)?(?:\s?\d[\d,]*만?)?)\s*원').allMatches(s)) parseWon(m[1]!) ?? -1,
           for (final m in RegExp(r'(\d+(?:\.\d+)?)\s*%').allMatches(s)) double.parse(m[1]!) + .5e-6,
         };
+    // 한글로 적은 금액은 확인할 수 없으니 보여 주지 않는다.
+    if (RegExp(r'[천백십]\s*만?\s*원|[일이삼사오육칠팔구]만\s*원').hasMatch(text)) return false;
     return read(text).difference(read(given)).isEmpty;
   }
 

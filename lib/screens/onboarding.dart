@@ -27,7 +27,7 @@ class InterviewScreen extends StatefulWidget {
 }
 
 class _InterviewScreenState extends State<InterviewScreen> {
-  var p = const Profile();
+  var p = Profile();
   var step = 0;
   final log = <(bool, String)>[];
   final input = TextEditingController();
@@ -67,7 +67,7 @@ class _InterviewScreenState extends State<InterviewScreen> {
       }
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (scroll.hasClients) scroll.animateTo(scroll.position.maxScrollExtent, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+      if (scroll.hasClients) scroll.animateTo(scroll.position.maxScrollExtent, duration: Duration(milliseconds: 250), curve: Curves.easeOut);
     });
   }
 
@@ -76,26 +76,26 @@ class _InterviewScreenState extends State<InterviewScreen> {
     final m = AppScope.read(context);
     return Scaffold(
         appBar: AppBar(
-            title: const Text('첫 인터뷰'),
-            actions: [if (widget.onExit != null) TextButton(onPressed: widget.onExit, child: const Text('나가기'))],
-            bottom: PreferredSize(preferredSize: const Size.fromHeight(6), child: Bar(step / Ask.values.length, height: 6))),
+            title: Text('첫 인터뷰'),
+            actions: [if (widget.onExit != null) TextButton(onPressed: widget.onExit, child: Text('나가기'))],
+            bottom: PreferredSize(preferredSize: Size.fromHeight(6), child: Bar(step / Ask.values.length, height: 6))),
         body: SafeArea(
             child: Column(children: [
-          Expanded(child: ListView(controller: scroll, padding: const EdgeInsets.all(20), children: [for (final (me, t) in log) Bubble(t, me: me)])),
+          Expanded(child: ListView(controller: scroll, padding: EdgeInsets.all(20), children: [for (final (me, t) in log) Bubble(t, me: me)])),
           if (done)
             Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                padding: EdgeInsets.fromLTRB(20, 0, 20, 20),
                 child: Row(children: [
                   TextButton(
                       onPressed: () => setState(() {
-                            p = const Profile();
+                            p = Profile();
                             step = 0;
                             log
                               ..add((true, '다시 할게요'))
                               ..add((false, questions[ask]!.$1));
                           }),
-                      child: const Text('다시 답하기')),
-                  const SizedBox(width: 8),
+                      child: Text('다시 답하기')),
+                  SizedBox(width: 8),
                   Expanded(
                       child: SaveButton('맞아요', () async {
                     final ok = await attempt(context, () => m.saveProfile(p));
@@ -106,14 +106,14 @@ class _InterviewScreenState extends State<InterviewScreen> {
             if (questions[ask]!.$2.isNotEmpty)
               SizedBox(
                   height: 48,
-                  child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 20), children: [
-                    for (final o in questions[ask]!.$2) Padding(padding: const EdgeInsets.only(right: 8), child: ActionChip(label: Text(o), onPressed: () => send(o)))
+                  child: ListView(scrollDirection: Axis.horizontal, padding: EdgeInsets.symmetric(horizontal: 20), children: [
+                    for (final o in questions[ask]!.$2) Padding(padding: EdgeInsets.only(right: 8), child: ActionChip(label: Text(o), onPressed: () => send(o)))
                   ])),
             Padding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 12, 14),
+                padding: EdgeInsets.fromLTRB(20, 4, 12, 14),
                 child: Row(children: [
-                  Expanded(child: TextField(controller: input, onSubmitted: send, textInputAction: TextInputAction.send, decoration: const InputDecoration(hintText: '편하게 답해 주세요'))),
-                  IconButton(tooltip: '보내기', onPressed: () => send(input.text), icon: const Icon(Icons.arrow_upward_rounded, color: AppColors.olive)),
+                  Expanded(child: TextField(controller: input, onSubmitted: send, textInputAction: TextInputAction.send, decoration: InputDecoration(hintText: '편하게 답해 주세요'))),
+                  IconButton(tooltip: '보내기', onPressed: () => send(input.text), icon: Icon(Icons.arrow_upward_rounded, color: AppColors.olive)),
                 ])),
           ],
         ])));
@@ -130,12 +130,12 @@ class Bubble extends StatelessWidget {
       alignment: me ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
           margin: EdgeInsets.only(bottom: 10, left: me ? 48 : 0, right: me ? 0 : 32),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-              color: me ? AppColors.olive : AppColors.card,
-              borderRadius: BorderRadius.circular(20).copyWith(bottomRight: me ? const Radius.circular(6) : null, bottomLeft: me ? null : const Radius.circular(6))),
+              color: me ? AppColors.main : AppColors.card,
+              borderRadius: BorderRadius.circular(20).copyWith(bottomRight: me ? Radius.circular(6) : null, bottomLeft: me ? null : Radius.circular(6))),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            SelectableText(text, style: TextStyle(color: me ? Colors.white : AppColors.text, height: 1.5)),
+            SelectableText(text, style: TextStyle(color: me ? AppColors.ink : AppColors.text, height: 1.5)),
             ?child,
           ])));
 }
@@ -192,42 +192,42 @@ class _PlanScreenState extends State<PlanScreen> {
     final fresh = old == null || restart;
     final start = fresh ? m.today : old.start;
     // 첫 기간이 한 달보다 짧으면 그다음 달 금액을 따로 묻는다.
-    final probe = PlanSettings(living: 0, saving: 0, start: start, payday: payday).planFor(m.now, const []);
+    final probe = PlanSettings(living: 0, saving: 0, start: start, payday: payday).planFor(m.now, []);
     final partial = probe.start == dateOnly(start) && probe.days < 28;
     final month = partial ? parseWon(monthly.text) ?? l : l;
-    final draft = PlanSettings(living: month ?? 0, firstLiving: partial ? l : old?.firstLiving, saving: s, start: start, payday: payday);
+    final draft = PlanSettings(living: month ?? 0, firstLiving: partial ? l : probe.start == dateOnly(start) ? null : old?.firstLiving, saving: s, start: start, payday: payday);
     final plan = draft.planFor(m.now, m.fixed);
     return Scaffold(
-        appBar: AppBar(title: Text(widget.first ? '하루 생활비 정하기' : '생활비 설정'), actions: [if (widget.onExit != null) TextButton(onPressed: widget.onExit, child: const Text('나가기'))]),
+        appBar: AppBar(title: Text(widget.first ? '하루 생활비 정하기' : '생활비 설정'), actions: [if (widget.onExit != null) TextButton(onPressed: widget.onExit, child: Text('나가기'))]),
         body: SafeArea(
             child: Form(
                 key: form,
-                child: ListView(padding: const EdgeInsets.all(20), children: [
+                child: ListView(padding: pagePad(context), children: [
                   MoneyField(living, partial ? '다음 수입일까지 쓸 생활비' : '한 기간에 쓸 생활비', helper: '고정지출과 저축할 돈을 포함한 금액이에요'),
                   if (partial) MoneyField(monthly, '그다음부터 한 달 생활비', helper: '수입일이 지나면 이 금액으로 바뀌어요'),
                   MoneyField(saving, '먼저 저축할 금액', allowZero: true),
                   if (widget.first) MoneyField(target, '모으고 싶은 목표 금액'),
                   DropdownButtonFormField<int?>(isExpanded: true, 
                       initialValue: payday,
-                      decoration: const InputDecoration(labelText: '수입일'),
+                      decoration: InputDecoration(labelText: '수입일'),
                       items: [
-                        const DropdownMenuItem(value: null, child: Text('정해진 날 없음 (30일 단위)')),
+                        DropdownMenuItem(value: null, child: Text('정해진 날 없음 (30일 단위)')),
                         for (var d = 1; d <= 31; d++) DropdownMenuItem(value: d, child: Text('매달 $d일'))
                       ],
                       onChanged: (v) => setState(() => payday = v)),
                   if (old != null && !widget.first)
-                    SwitchListTile(contentPadding: EdgeInsets.zero, value: restart, onChanged: (v) => setState(() => restart = v), title: const Text('오늘부터 새 기간 시작'), subtitle: const Text('켜면 이월과 초과를 처음부터 다시 세요')),
-                  const SizedBox(height: 18),
+                    SwitchListTile(contentPadding: EdgeInsets.zero, value: restart, onChanged: (v) => setState(() => restart = v), title: Text('오늘부터 새 기간 시작'), subtitle: Text('켜면 이월과 초과를 처음부터 다시 세요')),
+                  SizedBox(height: 18),
                   if (l != null && l > 0)
                     SoftCard(
                         color: AppColors.mist,
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          const Text('하루에 쓸 수 있는 돈', style: TextStyle(fontWeight: FontWeight.w700)),
+                          Text('하루에 쓸 수 있는 돈', style: TextStyle(fontWeight: FontWeight.w700)),
                           Won(plan.base(m.today), size: 34),
-                          Text('(${comma(l)} − 고정지출 ${comma(plan.fixed)} − 저축 ${comma(s)}) ÷ ${plan.days}일', style: const TextStyle(color: AppColors.sub)),
-                          if (plan.pool == 0) const Text('고정지출과 저축이 생활비보다 커요', style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w700)),
+                          Text('(${comma(l)} − 고정지출 ${comma(plan.fixed)} − 저축 ${comma(s)}) ÷ ${plan.days}일', style: TextStyle(color: AppColors.sub)),
+                          if (plan.pool == 0) Text('고정지출과 저축이 생활비보다 커요', style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w700)),
                         ])),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
                   SaveButton(widget.first ? '시작하기' : '저장', () async {
                     if (!form.currentState!.validate()) return;
                     final ok = await attempt(context, () async {
@@ -236,7 +236,7 @@ class _PlanScreenState extends State<PlanScreen> {
                     });
                     if (ok && context.mounted && !widget.first) Navigator.pop(context);
                   }),
-                  if (widget.first) Padding(padding: const EdgeInsets.only(top: 10), child: Text('다 채우면 ${PetStage.seed.label} 펫을 만나요', textAlign: TextAlign.center, style: const TextStyle(color: AppColors.sub))),
+                  if (widget.first) Padding(padding: EdgeInsets.only(top: 10), child: Text('다 채우면 ${PetStage.seed.label} 펫을 만나요', textAlign: TextAlign.center, style: TextStyle(color: AppColors.sub))),
                 ]))));
   }
 }

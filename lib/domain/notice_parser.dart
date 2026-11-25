@@ -18,22 +18,41 @@ class ParsedNotice {
 }
 
 final _amount = RegExp(r'(?<![\d,])(\d{1,3}(?:,\d{3})+|\d+)\s*원');
-final _cumulative = RegExp(r'(?:총\s*)?(?:누적|잔액|한도|사용가능)[^\d\n]*[\d,]+\s*원?');
+final _cumulative = RegExp(r'(?:총\s*)?(?:누적|잔액|한도|사용가능|결제\s*예정금액)[^\d\n]*[\d,]+\s*원?');
 final _date = RegExp(r'(?<!\d)(\d{1,2})[/.](\d{1,2})\s+(\d{1,2}):(\d{2})');
-final _issuer = RegExp(r'Web발신|카드|페이|뱅크|은행|토스');
-final _ignore = RegExp(r'\(광고\)|거절|실패|입금|예정|결제일|인증번호|요청|하면|하세요|해야|했어(?!요)|했니|할까|특가|쿠폰|이벤트');
+final _issuer = RegExp(r'Web발신|카드|페이|뱅크|은행|토스|\bPay\b', caseSensitive: false);
+
+/// 카드사 승인 문구. 광고 낱말이 섞여도 결제로 본다.
+final _approval = RegExp(r'(?:카드|페이|뱅크|은행|Pay)[^\n]{0,14}승인|승인취소|승인\s*\n|원\s*승인\s+\S|카드[^\n]{0,12}\n?[^\n]*승인', caseSensitive: false);
+
+/// 어떤 문구에 있어도 결제가 아니다.
+final _never = RegExp(r'\(광고\)|승인\s*거절|거절|결제\s*실패|입금|인증번호|결제\s*요청|승인\s*부탁');
+final _chatty = RegExp(r'예정|결제일|하면|하세요|해야|했어|했음|결제함|했니|할까|특가|쿠폰|이벤트|부탁|보내줘|ㅋㅋ');
 final _refund = RegExp(r'환불|부분\s*취소');
 final _cancel = RegExp(r'취소');
 
 /// 결제 알림으로 보이는가. 읽지 못했을 때 「확인 필요」 로 남길지 정한다.
-bool looksLikePayment(String raw) => 
-    !_ignore.hasMatch(raw) &&
-    _amount.hasMatch(raw) &&
-    (raw.contains('승인') || (raw.contains('결제') && _issuer.hasMatch(raw)));
+bool looksLikePayment(String raw, {String app = ''}) {
+  if (_never.hasMatch(raw) || !_amount.hasMatch(raw)) return false;
+  if (app.contains('카카오톡')) {
+    // 대화방 이름이 아니라 카드사 채널이 보낸 정해진 형식만 읽는다.
+    final first = raw.trimLeft().split('\n').first.trim();
+    final channel = RegExp(r'^\[?[^\s\]]*(카드|카카오페이|페이|뱅크|은행)\]?$').hasMatch(first) || RegExp(r'^\[[^\]]*(카드|페이|뱅크|은행)\]').hasMatch(first);
+    if (!channel || (_chatty.hasMatch(raw) && !_approval.hasMatch(raw))) return false;
+    return RegExp(r'승인|결제|환불|취소').hasMatch(raw);
+  }
+  if (_approval.hasMatch(raw)) return true;
+  if (raw.contains('승인') && !_chatty.hasMatch(raw)) return true;
+  // 결제 앱이 보낸 것이면 문구가 애매해도 버리지 않는다.
+  if (_issuer.hasMatch(app)) return RegExp(r'결제(?!\s*예정|일)|환불|취소').hasMatch(raw) && !RegExp(r'하면|하세요|해야|특가|쿠폰|이벤트').hasMatch(raw);
+  return RegExp(r'결제|환불|취소').hasMatch(raw) && _issuer.hasMatch(raw) && !_chatty.hasMatch(raw.replaceAll('했어요', ''));
+}
+
+bool isRefundText(String raw) => RegExp(r'취소|환불').hasMatch(raw);
 
 /// 금액과 가맹점을 모두 확신할 때만 값을 낸다. 아니면 null.
-ParsedNotice? parseNotice(String raw, DateTime receivedAt) {
-  if (!looksLikePayment(raw) || _refund.hasMatch(raw)) return null;
+ParsedNotice? parseNotice(String raw, DateTime receivedAt, {String app = ''}) {
+  if (!looksLikePayment(raw, app: app) || _refund.hasMatch(raw)) return null;
   final text = raw.replaceAll(_cumulative, ' ');
   final am = _amount.firstMatch(text);
   if (am == null) return null;
@@ -61,20 +80,23 @@ String? _merchant(String text, RegExpMatch am) {
   // "쿠팡에서 18,900원을 결제"
   final before = RegExp(r'([^\n]+?)에서\s*$').firstMatch(text.substring(0, am.start));
   if (before != null) return _clean(before[1]!);
+  // "메가커피\n4,800원 결제"
+  final head = text.substring(0, am.start).trimRight().split('\n').last;
   final tail = text
       .substring(am.end)
       .replaceAll(_date, '\n')
-      .replaceAll(RegExp(r'\(?일시불\)?|\(?\d+개월\)?|승인취소|승인|취소|결제(?:\s*완료)?|체크카드|신용카드|[|·]'), '\n');
+      .replaceAll(RegExp(r'(?:이벤트|혜택)\s*확인.*|앱에서.*|\(?일시불\)?|\(?\d+개월\)?|승인취소|승인|취소|결제(?:\s*완료)?|체크카드|신용카드|[|·]'), '\n');
   for (final line in tail.split('\n')) {
     final c = _clean(line);
     if (c != null) return c;
   }
-  return null;
+  return RegExp(r'승인|결제|Web발신|카드|페이|뱅크|은행|\*').hasMatch(head) ? null : _clean(head);
 }
 
 String? _clean(String s) {
   final t = s.replaceAll(RegExp(r'\s+'), ' ').trim();
   if (t.length < 2 || t.length > 40 || !RegExp(r'[가-힣A-Za-z]').hasMatch(t)) return null;
+  if (RegExp(r'^(을|를|이|가|했|함|하|해|부탁|완료|되)').hasMatch(t) && RegExp(r'^(을|를)?\s*(했|함|하|해|부탁|완료|되)').hasMatch(t)) return null;
   if (RegExp(r'^[가-힣]\*[가-힣]님?$').hasMatch(t)) return null;
   return t;
 }

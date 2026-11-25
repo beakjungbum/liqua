@@ -171,24 +171,23 @@ class AppModel extends ChangeNotifier {
   Future<void> _settle() => Future<void>.delayed(Duration.zero);
 
   Future<NoticeResult> handleNotice(String raw, {required String app, required DateTime at}) => _serial(() async {
-        final p = parseNotice(raw, at);
+        final p = parseNotice(raw, at, app: app);
         if (p == null) {
-          if (!looksLikePayment(raw)) return NoticeResult.ignored;
-          if (pending.any((n) => n.raw == raw && n.app == app && n.at.difference(at).abs() <= const Duration(minutes: 3))) return NoticeResult.duplicate;
+          if (!looksLikePayment(raw, app: app)) return NoticeResult.ignored;
           return _keepPending(raw, app, at);
         }
         if (p.cancelled) {
           bool same(Txn t) => t.kind == TxnKind.expense && t.amount == p.amount && sameMerchant(t.merchant, p.merchant);
-          if (_cancelled.any((t) => same(t) && t.cancelledAt!.difference(p.at).abs() <= const Duration(minutes: 3))) {
+          if (_cancelled.any((t) => same(t) && (t.cancelSource == app ? t.cancelledAt == p.at : t.cancelledAt!.difference(p.at).abs() <= const Duration(minutes: 3)))) {
             return NoticeResult.duplicate;
           }
           final hit = txns.where((t) => same(t) && !t.at.isAfter(p.at));
           if (hit.isEmpty) return _keepPending(raw, app, at);
-          await store.set('transactions', hit.first.id, hit.first.copyWith(cancelledAt: p.at).toJson());
+          await store.set('transactions', hit.first.id, hit.first.copyWith(cancelledAt: p.at, cancelSource: app).toJson());
           await _settle();
           return NoticeResult.cancelled;
         }
-        final dup = txns.any((t) =>
+        final dup = [...txns, ..._cancelled].any((t) =>
             t.kind == TxnKind.expense && t.source != '직접 입력' && isDuplicate(t.asNotice, t.source, p, app));
         if (dup) return NoticeResult.duplicate;
         await _put(Txn(
@@ -198,6 +197,7 @@ class AppModel extends ChangeNotifier {
       });
 
   Future<NoticeResult> _keepPending(String raw, String app, DateTime at) async {
+    if (pending.any((n) => n.raw == raw && n.app == app && n.at.difference(at).abs() <= const Duration(minutes: 3))) return NoticeResult.duplicate;
     await store.set('notices', store.newId(),
         PendingNotice(id: '', raw: raw.length > 2000 ? raw.substring(0, 2000) : raw, app: app, at: at).toJson());
     await _settle();
@@ -236,7 +236,8 @@ class AppModel extends ChangeNotifier {
 
   Future<void> updateTxn(Txn t) => _serial(() async {
         final old = txns.where((x) => x.id == t.id);
-        if (old.isNotEmpty && _leftover(old.first) && (old.first.amount != t.amount || !_leftover(t))) {
+        if (old.isEmpty) throw ArgumentError('이미 취소되었거나 지워진 기록이에요');
+        if (_leftover(old.first) && (old.first.amount != t.amount || !_leftover(t))) {
           throw ArgumentError('저축 기록은 금액을 고칠 수 없어요. 지우고 다시 보내 주세요.');
         }
         await store.set('transactions', t.id, t.toJson());
@@ -257,7 +258,9 @@ class AppModel extends ChangeNotifier {
         await _settle();
       });
 
-  Op _moveSaving(Asset a, num v) => Op.merge('assets', a.id, a.quantity > 0
+  Op _moveSaving(Asset a, num v) => Op.merge('assets', a.id, v < 0 && -v >= a.valuation
+      ? {'currentPrice': 0, 'purchasePrice': 0}
+      : a.quantity > 0
       ? {'currentPrice': Inc(v / a.quantity), 'purchasePrice': Inc(v < 0 && a.purchasePrice < -v / a.quantity ? -a.purchasePrice : v / a.quantity)}
       : {'quantity': 1, 'currentPrice': v, 'purchasePrice': v});
 

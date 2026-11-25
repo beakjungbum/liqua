@@ -72,6 +72,6 @@ const noEvidence = '확인된 정보 없음';
 
 /// 특정 종목을 사고팔라는 답은 화면에 내지 않는다.
 bool recommendsTrade(String s) {
-  final t = s.replaceAll(RegExp(r'권하지|권유하지|추천하지'), '');
-  return RegExp(r'(매수|매도)[^.]{0,8}(하세요|추천|권|좋)|(사|파|담으|투자하|매입하)세요|사는 (게|것이) 좋|꼭 사|무조건 사|사야 (해|합)').hasMatch(t);
+  final t = s.replaceAll(RegExp(r'[^.]{0,6}(권하지|권유하지|추천하지)'), '');
+  return RegExp(r'(매수|매도)[^.]{0,8}(하세요|추천|권|좋)|(사|파|담으|투자하|매입하)세요|사는 (게|것이) 좋|꼭 사|무조건 사|사야 (해|합)|(매수|매도)\s*(적기|타이밍|기회)').hasMatch(t);
 }

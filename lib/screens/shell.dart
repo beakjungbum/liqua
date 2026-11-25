@@ -54,7 +54,15 @@ class _ShellState extends State<Shell> with WidgetsBindingObserver {
     }
   }
 
+  Object? shown;
   void reschedule() {
+    if (m.error != null && m.error != shown) {
+      shown = m.error;
+      final e = m.error!;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) toast(context, saveError(e));
+      });
+    }
     if (m.demo) return;
     final key = [m.today.toString(), for (final f in m.fixed) '${f.id}${f.name}${f.amount}${f.day}${f.remind}'].join('|');
     if (key == fixedKey) return;
@@ -71,12 +79,12 @@ class _ShellState extends State<Shell> with WidgetsBindingObserver {
         context,
         Column(children: [
           Mascot(stage: m.stage, size: 150, percent: m.percent, crowns: m.completedGoals, worried: a.kind != AlertKind.milestone),
-          const SizedBox(height: 6),
+          SizedBox(height: 6),
           Text(a.title, textAlign: TextAlign.center, style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800, color: a.kind == AlertKind.milestone ? AppColors.deep : AppColors.accent)),
-          const SizedBox(height: 6),
-          Text(a.body, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.sub)),
-          const SizedBox(height: 18),
-          Builder(builder: (c) => SizedBox(width: double.infinity, child: FilledButton(onPressed: () => Navigator.pop(c), child: const Text('확인했어요')))),
+          SizedBox(height: 6),
+          Text(a.body, textAlign: TextAlign.center, style: TextStyle(color: AppColors.sub)),
+          SizedBox(height: 18),
+          Builder(builder: (c) => SizedBox(width: double.infinity, child: FilledButton(onPressed: () => Navigator.pop(c), child: Text('확인했어요')))),
         ]));
   }
 
@@ -103,9 +111,9 @@ class _ShellState extends State<Shell> with WidgetsBindingObserver {
             bottom: false,
             child: IndexedStack(index: index, children: [
               HomeScreen(onExit: widget.onExit, go: (i) => setState(() => index = i)),
-              const BookScreen(),
-              const AssetScreen(),
-              const GoalScreen(),
+              BookScreen(),
+              AssetScreen(),
+              GoalScreen(),
             ])),
         bottomNavigationBar: NavigationBar(
             selectedIndex: index,
@@ -114,12 +122,12 @@ class _ShellState extends State<Shell> with WidgetsBindingObserver {
             surfaceTintColor: Colors.transparent,
             indicatorColor: AppColors.mist,
             destinations: [
-              const NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: '홈'),
+              NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: '홈'),
               NavigationDestination(
-                  icon: Badge(isLabelVisible: AppScope.of(context).pending.isNotEmpty, backgroundColor: AppColors.accent, child: const Icon(Icons.receipt_long_outlined)),
-                  selectedIcon: const Icon(Icons.receipt_long), label: '가계부'),
-              const NavigationDestination(icon: Icon(Icons.savings_outlined), selectedIcon: Icon(Icons.savings), label: '자산'),
-              const NavigationDestination(icon: Icon(Icons.flag_outlined), selectedIcon: Icon(Icons.flag), label: '목표'),
+                  icon: Badge(isLabelVisible: AppScope.of(context).pending.isNotEmpty, backgroundColor: AppColors.accent, child: Icon(Icons.receipt_long_outlined)),
+                  selectedIcon: Icon(Icons.receipt_long), label: '가계부'),
+              NavigationDestination(icon: Icon(Icons.savings_outlined), selectedIcon: Icon(Icons.savings), label: '자산'),
+              NavigationDestination(icon: Icon(Icons.flag_outlined), selectedIcon: Icon(Icons.flag), label: '목표'),
             ]),
       );
 }
