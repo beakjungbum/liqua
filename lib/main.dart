@@ -9,6 +9,8 @@ import 'package:mm_app/services/auth_service.dart';
 import 'package:mm_app/services/device_service.dart';
 import 'package:mm_app/theme/app_theme.dart';
 
+const _testToken = String.fromEnvironment('APP_CHECK_DEBUG_TOKEN');
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
@@ -22,7 +24,9 @@ Future<void> main() async {
   // App Check 가 실패해도 로그인과 저장은 이어 간다.
   try {
     await FirebaseAppCheck.instance.activate(
-      providerAndroid: kDebugMode ? AndroidDebugProvider() : AndroidPlayIntegrityProvider(),
+      // 스토어 밖에서 받은 시험용 APK 는 Play Integrity 를 통과하지 못한다.
+      // 그때만 빌드할 때 넣은 디버그 토큰을 쓴다. 토큰은 저장소에 넣지 않는다.
+      providerAndroid: kDebugMode || _testToken.isNotEmpty ? AndroidDebugProvider(debugToken: _testToken.isEmpty ? null : _testToken) : AndroidPlayIntegrityProvider(),
       providerApple: kDebugMode ? AppleDebugProvider() : AppleDeviceCheckProvider(),
       providerWeb: kDebugMode ? WebDebugProvider() : null,
     );
