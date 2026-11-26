@@ -1,4 +1,4 @@
-# 양세영 (@(직접 작성: 깃허브 아이디. 이메일 주소가 아니라 github.com/ 뒤에 오는 아이디))
+# 양세영 (@earlgreyvanillacreamlatte)
 
 > 성결대학교 미디어소프트웨어학과 M&M 소모임 멘토링(2026-2, 앱/AI 파트)에서
 > 멘토 [정우영](https://github.com/woo-2003), [김동준](https://github.com/N3skafe)이 제공한
