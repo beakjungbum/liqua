@@ -5,19 +5,19 @@
 
 | 홈 | 하루 생활비 | 과소비 경고 |
 |---|---|---|
-| ![홈](docs/shots/home.png) | ![하루 생활비](docs/shots/budget.png) | ![과소비 경고](docs/shots/warning.png) |
+| ![홈](docs/screenshots/home.png) | ![하루 생활비](docs/screenshots/budget.png) | ![과소비 경고](docs/screenshots/warning.png) |
 
 | 가계부 | 자산 | 목표와 펫 |
 |---|---|---|
-| ![가계부](docs/shots/book.png) | ![자산](docs/shots/asset.png) | ![목표](docs/shots/goal.png) |
+| ![가계부](docs/screenshots/book.png) | ![자산](docs/screenshots/asset.png) | ![목표](docs/screenshots/goal.png) |
 
 | 다크 홈 | 다크 자산 | 다크 목표 |
 |---|---|---|
-| ![다크 홈](docs/shots/dark-home.png) | ![다크 자산](docs/shots/dark-asset.png) | ![다크 목표](docs/shots/dark-goal.png) |
+| ![다크 홈](docs/screenshots/dark-home.png) | ![다크 자산](docs/screenshots/dark-asset.png) | ![다크 목표](docs/screenshots/dark-goal.png) |
 
 | 왕관 랭크 | 펫 성장 단계 |
 |---|---|
-| ![왕관 랭크](docs/shots/crown.png) | ![펫 성장 단계](docs/shots/pets.png) |
+| ![왕관 랭크](docs/screenshots/crown.png) | ![펫 성장 단계](docs/screenshots/pets.png) |
 
 화면은 Android 에뮬레이터에서 예시 데이터로 찍었습니다. 왕관 랭크 화면은 목표를 3번 달성한 상태로 바꿔 찍었습니다.
 
