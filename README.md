@@ -1,14 +1,25 @@
+<div align="center">
+
+<img src="./assets/images/pets/growing.png" width="112" alt="Liqua 펫">
+
 # Liqua
-> 결제 알림을 자동으로 기록하고 오늘 쓸 돈을 알려 주는 자산관리 앱 **하루 생활비 · 자동 기록 · 성장형 펫**
+
+**결제 알림을 자동으로 기록하고 오늘 쓸 돈을 알려 주는 자산관리 앱**
+
+`하루 생활비` · `자동 기록` · `성장형 펫`
 
 ![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)
 ![Firebase](https://img.shields.io/badge/Firebase-Auth%20%7C%20Firestore%20%7C%20AI%20Logic-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)
 ![AI](https://img.shields.io/badge/AI-Gemini-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white)
 ![Claude Code](https://img.shields.io/badge/AI%20%ED%98%91%EC%97%85-Claude%20Code-D97757?style=for-the-badge&logo=claude&logoColor=white)
 
+<img src="./docs/banner.png" width="100%" alt="Liqua 목표, 홈, 과소비 경고 화면">
+
 **프로젝트** · 성결대학교 미디어소프트웨어학과 M&M 소모임 멘토링 프로젝트 (2026-2, 앱/AI 파트)  
 **기간** · 2026-10-02 ~ 2026-11-26  
 **팀** · 백정범 (앱 구현, Claude Code 협업) 외 3명  
+
+</div>
 
 ---
 
@@ -25,15 +36,40 @@ Liqua는 사회초년생과 대학생을 위한 자산관리 앱입니다.
 
 ## 스크린샷
 
-| 홈 | 하루 생활비 | 과소비 경고 | 가계부 |
-| :---: | :---: | :---: | :---: |
-| ![홈](./docs/screenshots/01-home.png) | ![하루 생활비](./docs/screenshots/02-budget.png) | ![과소비 경고](./docs/screenshots/03-warning.png) | ![가계부](./docs/screenshots/04-book.png) |
-| **자산** | **목표와 펫** | **왕관 랭크** | **펫 성장 단계** |
-| ![자산](./docs/screenshots/05-asset.png) | ![목표와 펫](./docs/screenshots/06-goal.png) | ![왕관 랭크](./docs/screenshots/07-crown.png) | ![펫 성장 단계](./docs/screenshots/08-pets.png) |
-| **혜택과 투자 정보** | **다크 홈** | **다크 자산** | **다크 목표** |
-| ![혜택과 투자 정보](./docs/screenshots/09-guide.png) | ![다크 홈](./docs/screenshots/10-dark-home.png) | ![다크 자산](./docs/screenshots/11-dark-asset.png) | ![다크 목표](./docs/screenshots/12-dark-goal.png) |
+<div align="center">
+
+<table>
+<tr>
+<td align="center"><img src="./docs/screenshots/01-home.png" width="200" alt="홈"><br><sub><b>홈</b></sub></td>
+<td align="center"><img src="./docs/screenshots/02-budget.png" width="200" alt="하루 생활비"><br><sub><b>하루 생활비</b></sub></td>
+<td align="center"><img src="./docs/screenshots/03-warning.png" width="200" alt="과소비 경고"><br><sub><b>과소비 경고</b></sub></td>
+<td align="center"><img src="./docs/screenshots/04-book.png" width="200" alt="가계부"><br><sub><b>가계부</b></sub></td>
+</tr>
+<tr>
+<td align="center"><img src="./docs/screenshots/05-asset.png" width="200" alt="자산"><br><sub><b>자산</b></sub></td>
+<td align="center"><img src="./docs/screenshots/06-goal.png" width="200" alt="목표와 펫"><br><sub><b>목표와 펫</b></sub></td>
+<td align="center"><img src="./docs/screenshots/07-crown.png" width="200" alt="왕관 랭크"><br><sub><b>왕관 랭크</b></sub></td>
+<td align="center"><img src="./docs/screenshots/08-guide.png" width="200" alt="혜택과 투자 정보"><br><sub><b>혜택과 투자 정보</b></sub></td>
+</tr>
+<tr>
+<td align="center"><img src="./docs/screenshots/09-dark-home.png" width="200" alt="다크 홈"><br><sub><b>다크 홈</b></sub></td>
+<td align="center"><img src="./docs/screenshots/10-dark-asset.png" width="200" alt="다크 자산"><br><sub><b>다크 자산</b></sub></td>
+<td align="center"><img src="./docs/screenshots/11-dark-goal.png" width="200" alt="다크 목표"><br><sub><b>다크 목표</b></sub></td>
+</tr>
+</table>
+
+</div>
 
 화면은 Android 에뮬레이터에서 예시 데이터로 찍었습니다. 왕관 랭크 화면은 목표를 3번 달성한 상태로 바꿔 찍었습니다.
+
+### 펫 성장과 왕관 랭크
+
+기록을 이어 가고 목표에 가까워질수록 펫이 자랍니다. 왕관에 닿은 뒤에는 목표를 하나 이룰 때마다 랭크가 오릅니다.
+
+<table>
+<tr><th>성장</th><td align="center"><img src="./assets/images/pets/seed.png" width="80" alt="씨앗"><br><sub>씨앗</sub></td><td align="center"><img src="./assets/images/pets/sprout.png" width="80" alt="새싹"><br><sub>새싹</sub></td><td align="center"><img src="./assets/images/pets/growing.png" width="80" alt="성장"><br><sub>성장</sub></td><td align="center"><img src="./assets/images/pets/flower.png" width="80" alt="꽃"><br><sub>꽃</sub></td><td align="center"><img src="./assets/images/pets/fruit.png" width="80" alt="열매"><br><sub>열매</sub></td><td align="center"><img src="./assets/images/pets/crown_toy.png" width="80" alt="왕관"><br><sub>왕관</sub></td></tr>
+<tr><th>랭크</th><td align="center"><img src="./assets/images/pets/crown_toy.png" width="80" alt="토이"><br><sub>토이</sub></td><td align="center"><img src="./assets/images/pets/crown_bronze.png" width="80" alt="브론즈"><br><sub>브론즈</sub></td><td align="center"><img src="./assets/images/pets/crown_platinum.png" width="80" alt="플래티넘"><br><sub>플래티넘</sub></td><td align="center"><img src="./assets/images/pets/crown_diamond.png" width="80" alt="다이아"><br><sub>다이아</sub></td><td align="center"><img src="./assets/images/pets/crown_ruby.png" width="80" alt="루비"><br><sub>루비</sub></td><td align="center"><img src="./assets/images/pets/crown_imperial.png" width="80" alt="임페리얼"><br><sub>임페리얼</sub></td></tr>
+</table>
 
 ---
 
@@ -94,14 +130,15 @@ Liqua는 사회초년생과 대학생을 위한 자산관리 앱입니다.
 
 ## 디자인
 
-| 쓰임 | 색 |
-| --- | --- |
-| 메인 | 파스텔 올리브 `#AEB68A` |
-| 보조 | 소프트 세이지 `#C9CEAC` |
-| 글자 강조 | 딥 올리브 `#777D58` |
-| 포인트 | 피치 오렌지 `#EFB18D` |
-| 주요 버튼 | Warm Orange `#FF7133` |
-| 배경 | 라이트 `#F5F8ED`, 다크 `#11180F` |
+| 색 | 쓰임 | 이름 | 값 |
+| :---: | --- | --- | --- |
+| <img src="https://img.shields.io/badge/%20-%20-AEB68A?style=for-the-badge" width="28" height="20" alt="#AEB68A"> | 메인 | 파스텔 올리브 | `#AEB68A` |
+| <img src="https://img.shields.io/badge/%20-%20-C9CEAC?style=for-the-badge" width="28" height="20" alt="#C9CEAC"> | 보조 | 소프트 세이지 | `#C9CEAC` |
+| <img src="https://img.shields.io/badge/%20-%20-777D58?style=for-the-badge" width="28" height="20" alt="#777D58"> | 글자 강조 | 딥 올리브 | `#777D58` |
+| <img src="https://img.shields.io/badge/%20-%20-EFB18D?style=for-the-badge" width="28" height="20" alt="#EFB18D"> | 포인트 | 피치 오렌지 | `#EFB18D` |
+| <img src="https://img.shields.io/badge/%20-%20-FF7133?style=for-the-badge" width="28" height="20" alt="#FF7133"> | 주요 버튼 | Warm Orange | `#FF7133` |
+| <img src="https://img.shields.io/badge/%20-%20-F5F8ED?style=for-the-badge" width="28" height="20" alt="#F5F8ED"> | 라이트 배경 | Light Green | `#F5F8ED` |
+| <img src="https://img.shields.io/badge/%20-%20-11180F?style=for-the-badge" width="28" height="20" alt="#11180F"> | 다크 배경 | Dark Green | `#11180F` |
 
 - 주황과 올리브 위 흰 글씨는 대비가 2.74, 2.13이라 다크 그린 글씨를 쓴다(6.60, 8.49).
 - 폭 320px부터 글씨 2배까지 글자가 넘치지 않는지 자동으로 시험한다.
@@ -112,13 +149,23 @@ Liqua는 사회초년생과 대학생을 위한 자산관리 앱입니다.
 
 ## 구조
 
-```
-[홈·가계부·자산·목표 화면] → [AppModel 상태 관리] → [Firestore (계정별 데이터)]
-[Android 결제 알림] → [PaymentNoticeService 대기열] → [알림 해석 → 가계부 기록] → [Firestore]
-[하루 생활비·펫 성장 계산 (domain)] → [홈·목표 화면]
-[AI 상담 질문] → [공식 자료 28건 검색] → [Gemini (firebase_ai)] → [출처 검사] → [채팅 화면]
-[자산 화면] → [환율 조회 (공개 API)] → [원화 환산]
-[고정지출] → [기기 예약 알림 (결제일 하루 전)]
+```mermaid
+flowchart LR
+  N["Android 결제 알림"] --> K["PaymentNoticeService<br/>결제 알림만 대기열에"]
+  K --> M["AppModel<br/>순서대로 처리"]
+  UI["홈 · 가계부 · 자산 · 목표"] <--> M
+  M --> D["domain<br/>하루 생활비 · 펫 성장 계산"]
+  M <--> F[("Firestore<br/>계정별 데이터")]
+  Q["AI 상담 질문"] --> R["공식 자료 28건 검색"] --> G["Gemini<br/>firebase_ai"] --> V["출처 검사"] --> UI
+  M --> X["환율 API"]
+  M --> L["기기 예약 알림<br/>결제일 하루 전"]
+
+  classDef main fill:#AEB68A,stroke:#777D58,color:#11180F
+  classDef soft fill:#F5F8ED,stroke:#C9CEAC,color:#11180F
+  classDef point fill:#EFB18D,stroke:#FF7133,color:#11180F
+  class M,D main
+  class UI,F,X,L,K,N soft
+  class Q,R,G,V point
 ```
 
 ### 디렉터리 구조
@@ -179,10 +226,10 @@ lib/
 
 | 사진 | 이름 | 깃허브 | 역할 | 기록 |
 | :---: | :---: | :---: | :--- | :---: |
-| <img src="https://github.com/beakjungbum.png" width="40"> | 백정범 | [@beakjungbum](https://github.com/beakjungbum) | 팀장, 백엔드 (Firebase, 데이터 저장, AI 연동), 팀 회의 주도, 아이디어 정리, 계획서 작성 참여 | [보기](./docs/contributions/beakjungbum.md) |
-| <img src="https://github.com/vbr061003a10.png" width="40"> | 김윤정 | [@vbr061003a10](https://github.com/vbr061003a10) | 회의록과 기획서 초안 작성, 온라인 회의 주도, 앱 화면과 펫 디자인 초안, 앱 로고 제작 | [보기](./docs/contributions/vbr061003a10.md) |
-| <img src="https://github.com/earlgreyvanillacreamlatte.png" width="40"> | 양세영 | [@earlgreyvanillacreamlatte](https://github.com/earlgreyvanillacreamlatte) | 기능 기획, 디자인 아이디어와 피드백, 팀원 작업 검토 | [보기](./docs/contributions/earlgreyvanillacreamlatte.md) |
-| <img src="https://github.com/yongsungeun.png" width="40"> | 용성은 | [@yongsungeun](https://github.com/yongsungeun) | 디자인, 팀 이름, 기획서 통합, 발표 PPT, Figma 와이어프레임, 하루 생활비와 캐릭터 성장 시나리오 구상 | [보기](./docs/contributions/yongsungeun.md) |
+| <img src="https://github.com/beakjungbum.png" width="40"> | 백정범 | [@beakjungbum](https://github.com/beakjungbum) | 팀장 · 백엔드, 회의 주도, 계획서 작성 참여 | [보기](./docs/contributions/beakjungbum.md) |
+| <img src="https://github.com/vbr061003a10.png" width="40"> | 김윤정 | [@vbr061003a10](https://github.com/vbr061003a10) | 기획서 초안, 회의록, 화면·펫 디자인 초안, 로고 | [보기](./docs/contributions/vbr061003a10.md) |
+| <img src="https://github.com/earlgreyvanillacreamlatte.png" width="40"> | 양세영 | [@earlgreyvanillacreamlatte](https://github.com/earlgreyvanillacreamlatte) | 기능 기획, 디자인 피드백, 작업 검토 | [보기](./docs/contributions/earlgreyvanillacreamlatte.md) |
+| <img src="https://github.com/yongsungeun.png" width="40"> | 용성은 | [@yongsungeun](https://github.com/yongsungeun) | 디자인, 기획서 통합, 발표 PPT, Figma 와이어프레임 | [보기](./docs/contributions/yongsungeun.md) |
 
 - **앱 코드 구현** · 백정범
 - **전원** · M&M 멘토링 수업에서 멘토 코드를 직접 작성하고 수정하며 Flutter·Firebase 실습
