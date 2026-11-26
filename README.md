@@ -4,10 +4,11 @@
 ![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)
 ![Firebase](https://img.shields.io/badge/Firebase-Auth%20%7C%20Firestore%20%7C%20AI%20Logic-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)
 ![AI](https://img.shields.io/badge/AI-Gemini-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white)
+![Claude Code](https://img.shields.io/badge/AI%20%ED%98%91%EC%97%85-Claude%20Code-D97757?style=for-the-badge&logo=claude&logoColor=white)
 
 **프로젝트** · 성결대학교 미디어소프트웨어학과 M&M 소모임 멘토링 프로젝트 (2026-2, 앱/AI 파트)  
 **기간** · 2026-10-02 ~ 2026-11-26  
-**팀** · 백정범 (앱 구현) 외 3명  
+**팀** · 백정범 (앱 구현, Claude Code 협업) 외 3명  
 
 ---
 
@@ -16,7 +17,7 @@
 Liqua는 사회초년생과 대학생을 위한 자산관리 앱입니다.
 결제 알림에서 금액과 가맹점을 읽어 가계부에 기록하고, 다음 수입일까지 하루에 쓸 수 있는 돈을 계산합니다.
 아낀 돈이 목표 저축으로 이어지고, 목표 달성률에 따라 펫이 자랍니다.
-팀이 공모전 기획서로 기능과 화면을 설계했고, 팀장이 Flutter와 Firebase로 앱을 구현했습니다.
+팀이 공모전 기획서로 기능과 화면을 설계했고, 팀장이 AI 코딩 도구 Claude Code와 함께 Flutter와 Firebase로 앱을 구현했습니다.
 
 > **핵심** — 결제 알림 → 자동 기록 → 하루 생활비 갱신 → 과소비 경고 → 펫 성장까지 한 흐름으로 이어집니다.
 
@@ -91,6 +92,24 @@ Liqua는 사회초년생과 대학생을 위한 자산관리 앱입니다.
 
 ---
 
+## 디자인
+
+| 쓰임 | 색 |
+| --- | --- |
+| 메인 | 파스텔 올리브 `#AEB68A` |
+| 보조 | 소프트 세이지 `#C9CEAC` |
+| 글자 강조 | 딥 올리브 `#777D58` |
+| 포인트 | 피치 오렌지 `#EFB18D` |
+| 주요 버튼 | Warm Orange `#FF7133` |
+| 배경 | 라이트 `#F5F8ED`, 다크 `#11180F` |
+
+- 주황과 올리브 위 흰 글씨는 대비가 2.74, 2.13이라 다크 그린 글씨를 쓴다(6.60, 8.49).
+- 폭 320px부터 글씨 2배까지 글자가 넘치지 않는지 자동으로 시험한다.
+- 펫 캐릭터 그림은 GPT 이미지 생성으로 만들었다.
+- UX 원칙을 어디에 썼는지는 [docs/ux.md](./docs/ux.md)에 정리했다.
+
+---
+
 ## 구조
 
 ```
@@ -143,6 +162,16 @@ lib/
 └── ui/
     └── widgets.dart           # 공통 위젯, 펫 그림
 ```
+
+---
+
+## 설계에서 정한 것
+
+1. 숫자는 코드가 계산하고 AI는 설명만 한다. AI 답은 출처 id가 실제 자료와 맞을 때만 보여 준다.
+2. 알림 원문은 결제로 보이는 것만 저장한다. AI에는 이름과 결제 원문을 보내지 않는다.
+3. 기획서의 이월 공식은 이월이 있는 날 초과하면 같은 돈을 두 번 더한다. 실제로 남은 돈을 넘기도록 고쳤고, 기획서의 예시 값은 그대로 나온다.
+4. 자동 기록은 로그인한 계정으로만 모으고, 로그아웃하면 대기열과 예약 알림을 지운다.
+5. 알림은 저장이 끝난 뒤에만 대기열에서 지운다.
 
 ---
 
@@ -207,6 +236,19 @@ lib/
 ```bash
 flutter pub get
 flutter run
+```
+
+- Flutter 3.50과 JDK 21에서 빌드를 확인했다.
+- 로그인 없이 「예시로 둘러보기」로 모든 화면을 볼 수 있다.
+- Google 로그인과 AI는 Firebase 프로젝트에 앱 서명 SHA-1과 App Check 토큰을 등록해야 동작한다.
+- 수출입은행 환율을 쓰려면 `--dart-define=EXIM_KEY=발급키`를 붙인다. 없으면 유럽중앙은행 환율을 쓴다.
+
+### 시험
+
+```bash
+flutter analyze
+flutter test
+cd rules-test && npm ci && npm test   # Java 17 이상, Firestore 에뮬레이터
 ```
 
 ---
