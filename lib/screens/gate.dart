@@ -82,7 +82,7 @@ class Logo extends StatelessWidget {
   const Logo({super.key});
   @override
   Widget build(BuildContext context) => Column(mainAxisSize: MainAxisSize.min, children: [
-        Image(image: AssetImage('assets/images/mascot.png'), width: 132, excludeFromSemantics: true),
+        Image(image: AssetImage('assets/images/pets/growing.png'), width: 132, excludeFromSemantics: true),
         SizedBox(height: 8),
         Text('Liqua', style: TextStyle(fontSize: 42, fontWeight: FontWeight.w800, letterSpacing: -1, color: AppColors.deep)),
         Text('돈 관리의 시작부터 미래의 설계까지', style: TextStyle(color: AppColors.sub, fontSize: 15)),

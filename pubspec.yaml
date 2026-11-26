@@ -58,6 +58,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  crypto: ^3.0.8
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -70,7 +71,7 @@ flutter:
   # the material Icons class.
   uses-material-design: true
   assets:
-    - assets/images/mascot.png
+    - assets/images/pets/
     - assets/knowledge.json
   # To add assets to your application, add an assets section, like this:
   # assets:

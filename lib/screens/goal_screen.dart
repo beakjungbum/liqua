@@ -51,7 +51,14 @@ class _GoalScreenState extends State<GoalScreen> {
               for (final s in PetStage.values.skip(1))
                 Expanded(
                     child: Column(children: [
-                  Container(width: s == m.stage ? 16 : 11, height: s == m.stage ? 16 : 11, decoration: BoxDecoration(shape: BoxShape.circle, color: s == m.stage ? AppColors.orange : s.index < m.stage.index ? AppColors.olive : AppColors.card)),
+                  Opacity(
+                      opacity: s.index <= m.stage.index ? 1 : .35,
+                      child: ColorFiltered(
+                          colorFilter: s.index <= m.stage.index ? ColorFilter.mode(Colors.transparent, BlendMode.dst) : ColorFilter.matrix([.33, .33, .33, 0, 0, .33, .33, .33, 0, 0, .33, .33, .33, 0, 0, 0, 0, 0, 1, 0]),
+                          child: Container(
+                              padding: EdgeInsets.all(2),
+                              decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: s == m.stage ? AppColors.orange : Colors.transparent, width: 2)),
+                              child: Image.asset(petImage(s), width: 36, height: 36, excludeFromSemantics: true)))),
                   SizedBox(height: 4),
                   Text(s.label, style: TextStyle(fontSize: 12, fontWeight: s == m.stage ? FontWeight.w800 : FontWeight.w500, color: s == m.stage ? AppColors.text : AppColors.sub)),
                 ])),

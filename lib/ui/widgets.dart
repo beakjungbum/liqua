@@ -213,7 +213,25 @@ class _TrendPainter extends CustomPainter {
   bool shouldRepaint(_TrendPainter o) => true;
 }
 
-/// 팀 캐릭터. 단계에 따라 머리 위 장식이 바뀐다.
+/// 팀 캐릭터. 단계마다 그림과 크기가 바뀐다.
+String petImage(PetStage s) => 'assets/images/pets/${switch (s) {
+      PetStage.none || PetStage.seed => 'seed',
+      PetStage.sprout => 'sprout',
+      PetStage.growing => 'growing',
+      PetStage.flower => 'gold',
+      PetStage.fruit => 'cape',
+      PetStage.crown => 'crown',
+    }}.png';
+
+/// 앞 단계일수록 작게 그려 자라는 느낌을 준다.
+double petScale(PetStage s) => switch (s) {
+      PetStage.none || PetStage.seed => .6,
+      PetStage.sprout => .72,
+      PetStage.growing => .86,
+      PetStage.flower || PetStage.fruit => .94,
+      PetStage.crown => 1,
+    };
+
 class Mascot extends StatefulWidget {
   const Mascot({super.key, required this.stage, this.size = 88, this.worried = false, this.percent = 0, this.crowns = 1});
   final PetStage stage;
@@ -225,7 +243,7 @@ class Mascot extends StatefulWidget {
 }
 
 class _MascotState extends State<Mascot> with SingleTickerProviderStateMixin {
-  late final _a = AnimationController(vsync: this, duration: Duration(milliseconds: 2600));
+  late final _a = AnimationController(vsync: this, duration: const Duration(milliseconds: 2600));
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -239,111 +257,41 @@ class _MascotState extends State<Mascot> with SingleTickerProviderStateMixin {
   }
 
   @override
-  Widget build(BuildContext context) => Semantics(
-      image: true,
-      label: '펫, ${widget.stage.label} 단계${widget.worried ? ', 걱정하는 중' : ''}',
-      child: RepaintBoundary(
-          child: AnimatedBuilder(
-              animation: _a,
-              builder: (_, child) => Transform.translate(offset: Offset(0, -Curves.easeInOut.transform(_a.value) * widget.size * .025), child: child),
-              child: SizedBox(
-                  width: widget.size,
-                  height: widget.size,
-                  child: Stack(clipBehavior: Clip.none, children: [
-                    Positioned.fill(
-                        top: widget.size * .12,
-                        child: Image.asset('assets/images/mascot.png', fit: BoxFit.contain, filterQuality: FilterQuality.medium, excludeFromSemantics: true)),
-                    Positioned.fill(child: CustomPaint(painter: StageDecor(widget.stage, widget.percent, widget.crowns, widget.worried))),
-                  ])))));
+  Widget build(BuildContext context) {
+    final k = petScale(widget.stage);
+    return Semantics(
+        image: true,
+        label: '펫, ${widget.stage.label} 단계${widget.worried ? ', 걱정하는 중' : ''}',
+        child: RepaintBoundary(
+            child: SizedBox.square(
+                dimension: widget.size,
+                child: Stack(clipBehavior: Clip.none, alignment: Alignment.bottomCenter, children: [
+                  AnimatedBuilder(
+                      animation: _a,
+                      builder: (_, child) => Transform.translate(offset: Offset(0, -Curves.easeInOut.transform(_a.value) * widget.size * .025), child: child),
+                      child: AnimatedSwitcher(
+                          duration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : const Duration(milliseconds: 500),
+                          transitionBuilder: (c, a) => ScaleTransition(scale: Tween(begin: .8, end: 1.0).animate(CurvedAnimation(parent: a, curve: Curves.easeOutBack)), child: FadeTransition(opacity: a, child: c)),
+                          child: Image.asset(petImage(widget.stage),
+                              key: ValueKey(widget.stage), width: widget.size * k, height: widget.size * k, fit: BoxFit.contain, filterQuality: FilterQuality.medium, excludeFromSemantics: true))),
+                  if (widget.worried) Positioned.fill(child: CustomPaint(painter: _Drop())),
+                ]))));
+  }
 }
 
-class StageDecor extends CustomPainter {
-  StageDecor(this.stage, this.percent, this.crowns, this.worried);
-  final PetStage stage;
-  final double percent;
-  final int crowns;
-  final bool worried;
-  static const _line = Color(0xFF8A4B25);
-
+class _Drop extends CustomPainter {
   @override
   void paint(Canvas c, Size s) {
     c.scale(s.width / 100);
-    final o = Offset(43, 16);
-    Paint f(Color k) => Paint()..color = k;
-    final st = Paint()
-      ..color = _line
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1
-      ..strokeJoin = StrokeJoin.round;
-    switch (stage) {
-      case PetStage.none || PetStage.seed || PetStage.sprout:
-        break;
-      case PetStage.growing:
-        for (var i = 0; i < growthTicks(percent).clamp(1, 4); i++) {
-          c.save();
-          c.translate(o.dx + [-9.0, 10.0, -5.0, 6.0][i], o.dy - [0.0, 2.0, 6.0, 8.0][i]);
-          c.rotate([-.9, .9, -.4, .4][i]);
-          final leaf = Path()
-            ..moveTo(0, 4)
-            ..quadraticBezierTo(-5, -2, 0, -8)
-            ..quadraticBezierTo(5, -2, 0, 4);
-          c.drawPath(leaf, f(Color(0xFF8FB258)));
-          c.drawPath(leaf, st..color = Color(0xFF4F6B2C));
-          c.restore();
-        }
-      case PetStage.flower:
-        if (percent < 50) {
-          final bud = Path()
-            ..moveTo(o.dx, o.dy + 4)
-            ..cubicTo(o.dx - 9, o.dy, o.dx - 5, o.dy - 9, o.dx, o.dy - 11)
-            ..cubicTo(o.dx + 5, o.dy - 9, o.dx + 9, o.dy, o.dx, o.dy + 4);
-          c.drawPath(bud, f(Color(0xFFF6A6A0)));
-          c.drawPath(bud, st);
-        } else {
-          c.drawCircle(o.translate(0, -4), 19, Paint()..shader = RadialGradient(colors: [Color(0xFFFFE9A8), Color(0xFFFFE9A8).withValues(alpha: 0)]).createShader(Rect.fromCircle(center: o.translate(0, -4), radius: 19)));
-          for (var i = 0; i < 5; i++) {
-            final a = -pi / 2 + i * 2 * pi / 5;
-            final p = o.translate(cos(a) * 6.4, sin(a) * 6.4 - 4);
-            c.drawCircle(p, 4.8, f(Color(0xFFF6A6A0)));
-            c.drawCircle(p, 4.8, st);
-          }
-          c.drawCircle(o.translate(0, -4), 4, f(Color(0xFFFFC94F)));
-        }
-      case PetStage.fruit:
-        final ripe = percent >= 100;
-        for (final (dx, dy) in ripe ? [(-9.0, 0.0), (9.0, -1.0), (0.0, -6.0)] : [(-6.0, 0.0), (6.0, -1.0)]) {
-          c.drawCircle(o.translate(dx, dy - 3), 5.2, f(Color(0xFFE8703F)));
-          c.drawCircle(o.translate(dx, dy - 3), 5.2, st);
-          c.drawCircle(o.translate(dx - 1.6, dy - 5), 1.3, f(Colors.white70));
-        }
-      case PetStage.crown:
-        final w = 13.0;
-        final p = Path()
-          ..moveTo(o.dx - w, o.dy + 3)
-          ..lineTo(o.dx - w - 1, o.dy - 10)
-          ..lineTo(o.dx - w / 2, o.dy - 4)
-          ..lineTo(o.dx, o.dy - 13)
-          ..lineTo(o.dx + w / 2, o.dy - 4)
-          ..lineTo(o.dx + w + 1, o.dy - 10)
-          ..lineTo(o.dx + w, o.dy + 3)
-          ..close();
-        c.drawPath(p, f(Color(0xFFFFCB45)));
-        c.drawPath(p, st);
-        for (var i = 0; i < crowns.clamp(1, 3); i++) {
-          c.drawCircle(o.translate([0.0, -7.0, 7.0][i], -1), 1.9, f(Color(0xFFD8503A)));
-        }
-    }
-    if (worried) {
-      final d = Path()
-        ..moveTo(84, 22)
-        ..quadraticBezierTo(90, 31, 84, 34)
-        ..quadraticBezierTo(78, 31, 84, 22);
-      c.drawPath(d, f(Color(0xFF6FAEDD)));
-    }
+    final d = Path()
+      ..moveTo(84, 22)
+      ..quadraticBezierTo(90, 31, 84, 34)
+      ..quadraticBezierTo(78, 31, 84, 22);
+    c.drawPath(d, Paint()..color = const Color(0xFF6FAEDD));
   }
 
   @override
-  bool shouldRepaint(StageDecor o) => o.stage != stage || o.percent != percent || o.worried != worried || o.crowns != crowns;
+  bool shouldRepaint(_Drop o) => false;
 }
 
 /// 캐릭터가 말을 거는 줄.
