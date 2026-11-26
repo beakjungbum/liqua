@@ -167,13 +167,14 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   var busy = false;
-  String? error;
+  String? error, detail;
   var retry = false;
 
   Future<void> signIn() async {
     setState(() {
       busy = true;
       error = null;
+      detail = null;
       retry = false;
     });
     try {
@@ -183,6 +184,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final s = e.toString().toLowerCase();
       retry = s.contains('network') || s.contains('timeout');
       error = retry ? '네트워크에 연결할 수 없어요' : '계정 정보를 확인하세요';
+      detail = errorDetail(e);
     }
     if (mounted) setState(() => busy = false);
   }
@@ -195,7 +197,10 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(children: [
                 Expanded(child: Center(child: SingleChildScrollView(child: Logo()))),
                 if (error != null)
-                  Padding(padding: EdgeInsets.only(bottom: 12), child: Semantics(liveRegion: true, child: Text(error!, style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w600)))),
+                  Padding(padding: EdgeInsets.only(bottom: 12), child: Semantics(liveRegion: true, child: Column(children: [
+                    Text(error!, style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w600)),
+                    if (detail != null) Padding(padding: EdgeInsets.only(top: 4), child: SelectableText(detail!, textAlign: TextAlign.center, style: TextStyle(fontSize: 11, color: AppColors.sub))),
+                  ]))),
                 SizedBox(
                     width: double.infinity,
                     child: FilledButton(

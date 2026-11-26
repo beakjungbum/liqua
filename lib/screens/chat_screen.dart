@@ -76,6 +76,7 @@ class _ChatScreenState extends State<ChatScreen> {
               Bubble(a.text,
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     if (a.notice != null) Padding(padding: EdgeInsets.only(top: 8), child: Text(a.notice!, style: TextStyle(fontSize: 12, color: AppColors.sub))),
+                    if (a.detail != null) Padding(padding: EdgeInsets.only(top: 4), child: SelectableText('원인: ${a.detail}', style: TextStyle(fontSize: 11, color: AppColors.sub))),
                     for (final k in a.sources) SourceLink(k),
                   ])),
           if (busy) Bubble('자료를 찾고 있어요', child: Padding(padding: EdgeInsets.only(top: 8), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Skeleton(width: 200, height: 12), SizedBox(height: 8), Skeleton(width: 140, height: 12)]))),

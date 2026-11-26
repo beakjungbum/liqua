@@ -3,6 +3,7 @@ import 'package:mm_app/data/app_model.dart';
 import 'package:mm_app/data/store.dart';
 import 'package:mm_app/domain/rag.dart';
 import 'package:mm_app/services/ai_service.dart';
+import 'package:mm_app/ui/widgets.dart' show errorDetail;
 
 const doc = Knowledge(id: 'd1', kind: 'basics', title: '예금자보호', body: 'b', url: 'https://e.kr', source: 's', checkedAt: 'd');
 void main() {
@@ -23,6 +24,7 @@ void main() {
     expect(a.byModel, isFalse);
     expect(a.sources, isNotEmpty);
     expect(a.notice, contains('한도'));
+    expect(a.detail, contains('quota'));
   });
   test('같은 질문은 한 번만 부른다', () async {
     var calls = 0;
@@ -35,5 +37,8 @@ void main() {
     var sent = '';
     await AiService(generate: (p) async { sent = p; return '{"answer":"답","ids":[]}'; }).ask('내 지출 어때', m..name = '홍길동');
     expect(sent, isNot(contains('홍길동')));
+  });
+  test('에러 원문의 긴 토큰은 가린다', () {
+    expect(errorDetail(Exception('bad token 9E7D6FAD9E7D6FAD9E7D6FAD9E7D6FADXX x')), 'Exception: bad token … x');
   });
 }

@@ -42,6 +42,12 @@ void closeThis(BuildContext c) {
   r.isCurrent ? Navigator.pop(c) : Navigator.of(c).removeRoute(r);
 }
 
+/// 원인을 찾을 수 있게 에러 원문을 짧게 보인다. 긴 토큰은 가린다.
+String errorDetail(Object e) {
+  final s = e.toString().replaceAll(RegExp(r'[A-Za-z0-9_\-]{32,}'), '…').replaceAll(RegExp(r'\s+'), ' ').trim();
+  return s.length > 220 ? '${s.substring(0, 220)}…' : s;
+}
+
 void toast(BuildContext c, String s) => ScaffoldMessenger.of(c)
   ..hideCurrentSnackBar()
   ..showSnackBar(SnackBar(content: Text(s)));

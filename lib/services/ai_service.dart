@@ -6,9 +6,13 @@ import 'package:mm_app/data/app_model.dart';
 import 'package:mm_app/domain/insight.dart';
 import 'package:mm_app/domain/money.dart';
 import 'package:mm_app/domain/rag.dart';
+import 'package:mm_app/ui/widgets.dart' show errorDetail;
 
 class AiAnswer {
-  const AiAnswer(this.text, this.sources, {this.byModel = false, this.notice});
+  const AiAnswer(this.text, this.sources, {this.byModel = false, this.notice, this.detail});
+
+  /// 연결에 실패했을 때의 에러 원문.
+  final String? detail;
   final String text;
   final List<Knowledge> sources;
   final bool byModel;
@@ -78,7 +82,9 @@ class AiService {
       if (a != null) return _cache[key] = a;
       return const AiAnswer(noEvidence, [], notice: 'AI 답이 근거 규칙을 지키지 않아 보여 주지 않았어요.');
     } catch (e) {
-      return fallback(docs, mine ? nums : null, messageFor(e));
+      debugPrint('AI 실패: $e');
+      final f = fallback(docs, mine ? nums : null, messageFor(e));
+      return AiAnswer(f.text, f.sources, notice: f.notice, detail: errorDetail(e));
     }
   }
 
