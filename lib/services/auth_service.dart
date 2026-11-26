@@ -71,6 +71,20 @@ class AuthService {
     await _auth.signOut();
   }
 
+  /// 로그인 계정을 지운다. 로그인한 지 오래됐으면 Google 로그인을 한 번 더 받는다.
+  Future<void> deleteAccount() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    try {
+      await user.delete();
+    } on FirebaseAuthException catch (e) {
+      if (e.code != 'requires-recent-login') rethrow;
+      final again = await _googleCredential();
+      await again.user?.delete();
+    }
+    await signOut();
+  }
+
   Stream<UserProgress> watchProgress() {
     final uid = _auth.currentUser?.uid;
     if (uid == null || Firebase.apps.isEmpty) return const Stream.empty();

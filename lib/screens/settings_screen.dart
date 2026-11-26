@@ -4,6 +4,7 @@ import 'package:mm_app/domain/money.dart';
 import 'package:mm_app/screens/book_screen.dart';
 import 'package:mm_app/screens/onboarding.dart';
 import 'package:mm_app/theme/app_theme.dart';
+import 'package:mm_app/services/auth_service.dart';
 import 'package:mm_app/ui/widgets.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -37,6 +38,49 @@ class SettingsScreen extends StatelessWidget {
                 onExit();
               },
               child: Text(m.demo ? '둘러보기 끝내기' : '로그아웃')),
+          if (!m.demo) ...[SizedBox(height: 8), DeleteAccountButton()],
         ]));
   }
+}
+
+
+/// 계정 삭제. 기록, 자산, 목표와 로그인 계정을 모두 지운다.
+class DeleteAccountButton extends StatefulWidget {
+  const DeleteAccountButton({super.key});
+  @override
+  State<DeleteAccountButton> createState() => _DeleteAccountButtonState();
+}
+
+class _DeleteAccountButtonState extends State<DeleteAccountButton> {
+  var _busy = false;
+
+  Future<void> _delete() async {
+    final m = AppScope.of(context);
+    final ok = await showDialog<bool>(
+        context: context,
+        builder: (c) => AlertDialog(
+              title: Text('계정을 삭제할까요?'),
+              content: Text('가계부 기록, 자산, 목표, 고정지출, 펫 성장 기록이 모두 지워지고 되돌릴 수 없어요.'),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(c, false), child: Text('취소')),
+                TextButton(onPressed: () => Navigator.pop(c, true), style: TextButton.styleFrom(foregroundColor: AppColors.accent), child: Text('삭제')),
+              ],
+            ));
+    if (ok != true || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      await m.deleteAccount();
+      await AuthService.instance.deleteAccount();
+    } catch (e) {
+      if (mounted) toast(context, '계정을 삭제하지 못했어요. 잠시 뒤 다시 시도해 주세요.\n${errorDetail(e)}');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => TextButton(
+      onPressed: _busy ? null : _delete,
+      style: TextButton.styleFrom(foregroundColor: AppColors.accent, minimumSize: Size.fromHeight(48)),
+      child: Text(_busy ? '삭제하는 중…' : '계정 삭제'));
 }

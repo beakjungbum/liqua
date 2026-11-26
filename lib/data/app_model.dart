@@ -249,6 +249,12 @@ class AppModel extends ChangeNotifier {
 
   Future<void> refresh() => store.refresh();
 
+  /// 계정 삭제. 서버에 있는 이 사용자의 데이터를 모두 지운다. 로그인 계정 삭제는 화면에서 이어서 한다.
+  Future<void> deleteAccount() {
+    if (demo) throw StateError('둘러보기에는 지울 계정이 없어요');
+    return store.wipe();
+  }
+
   /// 밀어서 지운 기록을 그대로 되살린다.
   Future<void> restoreTxn(Txn t) => store.set('transactions', t.id, t.toJson());
 

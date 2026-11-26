@@ -75,6 +75,10 @@ describe('access control', () => {
       await assertFails(deleteDoc(doc(anon(), path)));
     });
   }
+  test('users profile: owner can delete own profile (account deletion)', async () => {
+    await seed(`users/${ME}`, { uid: ME, targetAmount: 0 });
+    await assertSucceeds(deleteDoc(doc(me(), `users/${ME}`)));
+  });
   test('users profile: other and anon denied', async () => {
     await seed(`users/${ME}`, { uid: ME, targetAmount: 0 });
     await assertFails(getDoc(doc(other(), `users/${ME}`)));

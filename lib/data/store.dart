@@ -24,6 +24,12 @@ class Op {
 
 /// 저장소. 로그인하면 Firestore, 둘러보기는 메모리를 쓴다.
 abstract class Store {
+  /// 사용자 문서 아래의 모든 컬렉션.
+  static const collections = ['transactions', 'assets', 'fixed', 'notices', 'snapshots'];
+
+  /// 계정 삭제용. 이 사용자의 모든 데이터를 지운다.
+  Future<void> wipe();
+
   Stream<List<Doc>> watch(String collection);
   Stream<Json> watchUser();
   /// 한 번에 모두 저장하거나 하나도 저장하지 않는다.
@@ -92,12 +98,29 @@ class FirestoreStore extends Store {
   @override
   Future<void> refresh() => Future.wait([
         _user.get(const GetOptions(source: Source.server)),
-        for (final c in const ['transactions', 'assets', 'fixed', 'notices', 'snapshots'])
+        for (final c in Store.collections)
           _user.collection(c).get(const GetOptions(source: Source.server)),
       ]).timeout(const Duration(seconds: 8));
 
   @override
   String newId() => _db.collection('_').doc().id;
+
+  /// 한 번에 지울 수 있는 문서는 500개라 400개씩 나눠 지운다.
+  @override
+  Future<void> wipe() async {
+    for (final c in Store.collections) {
+      while (true) {
+        final q = await _user.collection(c).limit(400).get(const GetOptions(source: Source.server));
+        if (q.docs.isEmpty) break;
+        final b = _db.batch();
+        for (final d in q.docs) {
+          b.delete(d.reference);
+        }
+        await b.commit();
+      }
+    }
+    await _user.delete();
+  }
 }
 
 class MemoryStore extends Store {
@@ -139,4 +162,12 @@ class MemoryStore extends Store {
 
   @override
   String newId() => 'm${_n++}';
+
+  @override
+  Future<void> wipe() async {
+    final touched = {..._docs.keys, '#user'};
+    _docs.clear();
+    _user.clear();
+    touched.forEach(_ch.add);
+  }
 }
