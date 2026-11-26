@@ -214,13 +214,14 @@ class _TrendPainter extends CustomPainter {
 }
 
 /// 팀 캐릭터. 단계마다 그림과 크기가 바뀐다.
-String petImage(PetStage s) => 'assets/images/pets/${switch (s) {
+/// 왕관 단계는 달성한 목표 수만큼 왕관이 바뀐다(6개째부터 같은 그림).
+String petImage(PetStage s, {int crowns = 1}) => 'assets/images/pets/${switch (s) {
       PetStage.none || PetStage.seed => 'seed',
       PetStage.sprout => 'sprout',
       PetStage.growing => 'growing',
-      PetStage.flower => 'gold',
-      PetStage.fruit => 'cape',
-      PetStage.crown => 'crown',
+      PetStage.flower => 'flower',
+      PetStage.fruit => 'fruit',
+      PetStage.crown => 'crown${crowns.clamp(1, 6)}',
     }}.png';
 
 /// 앞 단계일수록 작게 그려 자라는 느낌을 준다.
@@ -272,8 +273,8 @@ class _MascotState extends State<Mascot> with SingleTickerProviderStateMixin {
                       child: AnimatedSwitcher(
                           duration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : const Duration(milliseconds: 500),
                           transitionBuilder: (c, a) => ScaleTransition(scale: Tween(begin: .8, end: 1.0).animate(CurvedAnimation(parent: a, curve: Curves.easeOutBack)), child: FadeTransition(opacity: a, child: c)),
-                          child: Image.asset(petImage(widget.stage),
-                              key: ValueKey(widget.stage), width: widget.size * k, height: widget.size * k, fit: BoxFit.contain, filterQuality: FilterQuality.medium, excludeFromSemantics: true))),
+                          child: Image.asset(petImage(widget.stage, crowns: widget.crowns),
+                              key: ValueKey(petImage(widget.stage, crowns: widget.crowns)), width: widget.size * k, height: widget.size * k, fit: BoxFit.contain, filterQuality: FilterQuality.medium, excludeFromSemantics: true))),
                   if (widget.worried) Positioned.fill(child: CustomPaint(painter: _Drop())),
                 ]))));
   }
