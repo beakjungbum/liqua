@@ -214,14 +214,16 @@ class _TrendPainter extends CustomPainter {
 }
 
 /// 팀 캐릭터. 단계마다 그림과 크기가 바뀐다.
-/// 왕관 단계는 달성한 목표 수만큼 왕관이 바뀐다(6개째부터 같은 그림).
+String crownImage(CrownRank r) => 'assets/images/pets/crown_${r.name}.png';
+
+/// 왕관 단계는 달성한 목표 수만큼 랭크 그림이 바뀐다.
 String petImage(PetStage s, {int crowns = 1}) => 'assets/images/pets/${switch (s) {
       PetStage.none || PetStage.seed => 'seed',
       PetStage.sprout => 'sprout',
       PetStage.growing => 'growing',
       PetStage.flower => 'flower',
       PetStage.fruit => 'fruit',
-      PetStage.crown => 'crown${crowns.clamp(1, 6)}',
+      PetStage.crown => 'crown_${crownRank(crowns).name}',
     }}.png';
 
 /// 앞 단계일수록 작게 그려 자라는 느낌을 준다.
@@ -262,7 +264,7 @@ class _MascotState extends State<Mascot> with SingleTickerProviderStateMixin {
     final k = petScale(widget.stage);
     return Semantics(
         image: true,
-        label: '펫, ${widget.stage.label} 단계${widget.worried ? ', 걱정하는 중' : ''}',
+        label: '펫, ${petTitle(widget.stage, widget.crowns)}${widget.worried ? ', 걱정하는 중' : ''}',
         child: RepaintBoundary(
             child: SizedBox.square(
                 dimension: widget.size,

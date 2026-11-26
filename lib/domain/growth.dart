@@ -8,13 +8,37 @@ enum PetStage {
   growing('성장', '목표 25%를 모으면 꽃이 피어요'),
   flower('꽃', '목표 75%를 모으면 열매가 열려요'),
   fruit('열매', '목표 100%를 달성하면 왕관을 받아요'),
-  crown('왕관', '새 목표를 달성할 때마다 왕관이 화려해져요');
+  crown('왕관', '새 목표를 달성할 때마다 왕관 랭크가 올라요');
 
   const PetStage(this.label, this.next);
   final String label;
 
   /// 다음 단계 조건.
   final String next;
+}
+
+/// 왕관 랭크. 목표를 달성한 횟수만큼 오른다.
+enum CrownRank {
+  toy('토이 크라운'),
+  bronze('브론즈 크라운'),
+  platinum('플래티넘 크라운'),
+  diamond('다이아 크라운'),
+  ruby('루비 크라운'),
+  imperial('임페리얼 크라운');
+
+  const CrownRank(this.label);
+  final String label;
+}
+
+CrownRank crownRank(int completedGoals) => CrownRank.values[(completedGoals - 1).clamp(0, CrownRank.values.length - 1)];
+
+String petTitle(PetStage s, int completedGoals) => s == PetStage.crown ? crownRank(completedGoals).label : '${s.label} 단계';
+
+String petNext(PetStage s, int completedGoals) {
+  if (s != PetStage.crown) return s.next;
+  final r = crownRank(completedGoals);
+  if (r == CrownRank.imperial) return '최고 랭크, 임페리얼 크라운이에요';
+  return '목표를 하나 더 달성하면 ${CrownRank.values[r.index + 1].label}이 돼요';
 }
 
 PetStage petStage({

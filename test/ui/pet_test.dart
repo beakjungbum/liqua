@@ -29,4 +29,21 @@ void main() {
     expect(PetStage.flower.label, '꽃');
     expect(PetStage.fruit.label, '열매');
   });
+
+  test('왕관은 달성한 목표 수로 랭크가 오른다', () {
+    expect([for (var n = 1; n <= 6; n++) crownRank(n).label],
+        ['토이 크라운', '브론즈 크라운', '플래티넘 크라운', '다이아 크라운', '루비 크라운', '임페리얼 크라운']);
+    expect(crownRank(0), CrownRank.toy);
+    expect(crownRank(20), CrownRank.imperial);
+    expect(petTitle(PetStage.crown, 3), '플래티넘 크라운');
+    expect(petTitle(PetStage.flower, 3), '꽃 단계');
+    expect(petNext(PetStage.crown, 1), '목표를 하나 더 달성하면 브론즈 크라운이 돼요');
+    expect(petNext(PetStage.crown, 6), '최고 랭크, 임페리얼 크라운이에요');
+    expect(petNext(PetStage.fruit, 0), PetStage.fruit.next);
+  });
+
+  test('랭크마다 그림이 다르다', () {
+    expect({for (final r in CrownRank.values) hash(crownImage(r))}.length, CrownRank.values.length);
+    expect(petImage(PetStage.crown, crowns: 4), crownImage(CrownRank.diamond));
+  });
 }

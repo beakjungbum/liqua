@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:mm_app/domain/growth.dart';
 import 'package:mm_app/data/app_model.dart';
 import 'package:mm_app/domain/budget.dart';
 import 'package:mm_app/domain/money.dart';
@@ -100,7 +101,7 @@ class HomeScreen extends StatelessWidget {
     if (m.sharpDrop) return MascotSays('자산이 하루 만에 ${won(m.previousSnapshot!.total - m.total)} 줄었어요', '자산 탭에서 바뀐 항목을 봐 주세요', worried: true, onTap: () => go(2));
     final a = m.advices;
     if (a.isNotEmpty) return MascotSays(a.first.title, a.first.evidence, onTap: () => push(c, InsightScreen()));
-    return MascotSays('${m.streakDays}일째 기록하고 있어요', m.stage.next);
+    return MascotSays('${m.streakDays}일째 기록하고 있어요', petNext(m.stage, m.completedGoals));
   }
 }
 

@@ -41,7 +41,7 @@ class _GoalScreenState extends State<GoalScreen> {
           color: AppColors.mist,
           child: Column(children: [
             Row(children: [
-              Expanded(child: Text('${m.stage.label} 단계', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800))),
+              Expanded(child: Text(petTitle(m.stage, m.completedGoals), style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800))),
               Text('Lv.${m.level}', style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.text)),
             ]),
             SizedBox(height: 8),
@@ -49,22 +49,24 @@ class _GoalScreenState extends State<GoalScreen> {
             SizedBox(height: 8),
             Row(children: [
               for (final s in PetStage.values.skip(1))
-                Expanded(
-                    child: Column(children: [
-                  Opacity(
-                      opacity: s.index <= m.stage.index ? 1 : .35,
-                      child: ColorFiltered(
-                          colorFilter: s.index <= m.stage.index ? ColorFilter.mode(Colors.transparent, BlendMode.dst) : ColorFilter.matrix([.33, .33, .33, 0, 0, .33, .33, .33, 0, 0, .33, .33, .33, 0, 0, 0, 0, 0, 1, 0]),
-                          child: Container(
-                              padding: EdgeInsets.all(2),
-                              decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: s == m.stage ? AppColors.orange : Colors.transparent, width: 2)),
-                              child: Image.asset(petImage(s), width: 36, height: 36, excludeFromSemantics: true)))),
-                  SizedBox(height: 4),
-                  Text(s.label, style: TextStyle(fontSize: 12, fontWeight: s == m.stage ? FontWeight.w800 : FontWeight.w500, color: s == m.stage ? AppColors.text : AppColors.sub)),
-                ])),
+                Expanded(child: _Step(image: petImage(s, crowns: m.completedGoals), label: s.label, reached: s.index <= m.stage.index, current: s == m.stage)),
             ]),
+            if (m.stage == PetStage.crown) ...[
+              SizedBox(height: 16),
+              Align(alignment: Alignment.centerLeft, child: Text('왕관 랭크', style: TextStyle(fontWeight: FontWeight.w800))),
+              SizedBox(height: 8),
+              Row(children: [
+                for (final r in CrownRank.values)
+                  Expanded(
+                      child: _Step(
+                          image: crownImage(r),
+                          label: r.label.replaceFirst(' 크라운', ''),
+                          reached: r.index <= crownRank(m.completedGoals).index,
+                          current: r == crownRank(m.completedGoals))),
+              ]),
+            ],
             SizedBox(height: 12),
-            Text(m.stage.next, textAlign: TextAlign.center),
+            Text(petNext(m.stage, m.completedGoals), textAlign: TextAlign.center),
             SizedBox(height: 8),
             Bar((m.xp - xpForLevel(m.level)) / (xpForLevel(m.level + 1) - xpForLevel(m.level)), height: 7, track: AppColors.card),
             SizedBox(height: 4),
@@ -121,4 +123,25 @@ class _TargetFormState extends State<TargetForm> {
           if (ok && context.mounted) closeThis(context);
         }),
       ]));
+}
+
+/// 단계 미리보기 한 칸. 아직 못 간 칸은 흑백.
+class _Step extends StatelessWidget {
+  const _Step({required this.image, required this.label, required this.reached, required this.current});
+  final String image, label;
+  final bool reached, current;
+
+  @override
+  Widget build(BuildContext context) => Column(children: [
+        Opacity(
+            opacity: reached ? 1 : .35,
+            child: ColorFiltered(
+                colorFilter: reached ? ColorFilter.mode(Colors.transparent, BlendMode.dst) : ColorFilter.matrix([.33, .33, .33, 0, 0, .33, .33, .33, 0, 0, .33, .33, .33, 0, 0, 0, 0, 0, 1, 0]),
+                child: Container(
+                    padding: EdgeInsets.all(2),
+                    decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: current ? AppColors.orange : Colors.transparent, width: 2)),
+                    child: Image.asset(image, width: 36, height: 36, excludeFromSemantics: true)))),
+        SizedBox(height: 4),
+        Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, fontWeight: current ? FontWeight.w800 : FontWeight.w500, color: current ? AppColors.text : AppColors.sub)),
+      ]);
 }
